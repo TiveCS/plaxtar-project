@@ -13,8 +13,10 @@ public sealed class EditableNode
     public string? CssClass { get; set; }    // element: class attribute
     public string? Style { get; set; }       // element: inline style
     public Dictionary<string, object?> Params { get; set; } = new();
-    public List<EditableNode> Children { get; set; } = new();
+    public List<EditableNode> Children { get; set; } = new();               // default ChildContent
+    public Dictionary<string, List<EditableNode>> Slots { get; set; } = new(); // named RenderFragments
 
     public bool IsElement => Element is not null;
     public string DisplayName => Element is not null ? $"<{Element}>" : Component ?? "?";
+    public IEnumerable<EditableNode> AllChildren => Children.Concat(Slots.Values.SelectMany(x => x));
 }

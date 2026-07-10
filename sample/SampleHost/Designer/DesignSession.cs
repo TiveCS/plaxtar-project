@@ -25,13 +25,22 @@ public sealed class DesignSession
     public event Action? Changed;
     private void Notify() => Changed?.Invoke();
 
+    // The slot new nodes get inserted into for the selected container:
+    // null = default ChildContent; otherwise a named RenderFragment.
+    public string? ActiveSlot { get; private set; }
+
     public ComponentInfo? Info(string component) => _catalog.Components.FirstOrDefault(c => c.Name == component);
     public bool CanContain(string component) => Info(component)?.Params.Any(p => p.Kind == ParamKind.ChildContent) == true;
-    public bool CanContainNode(EditableNode n) => n.IsElement || (n.Component is { } c && CanContain(c));
+    public IReadOnlyList<string> NamedSlots(string? component) =>
+        component is null ? Array.Empty<string>()
+        : Info(component)?.Params.Where(p => p.Kind == ParamKind.Slot).Select(p => p.Name).ToList() ?? new();
+    public bool CanContainNode(EditableNode n) =>
+        n.IsElement || (n.Component is { } c && (CanContain(c) || NamedSlots(c).Count > 0));
 
     public EditableNode? Selected => SelectedId is null ? null : Find(Root, SelectedId);
 
-    public void Select(string? id) { SelectedId = id; Notify(); }
+    public void Select(string? id) { SelectedId = id; ActiveSlot = null; Notify(); }
+    public void SelectSlot(string? slot) { ActiveSlot = slot; Notify(); }
 
     public void New(string screen, string? shell)
     {
@@ -50,13 +59,22 @@ public sealed class DesignSession
     {
         // Add into the selected node if it accepts children, else into its parent, else root.
         var sel = Selected;
-        EditableNode target =
-            sel is not null && CanContainNode(sel) ? sel :
-            sel is not null ? (Parent(Root, sel) ?? Root) :
-            Root;
+        if (sel is not null && CanContainNode(sel))
+        {
+            if (ActiveSlot is { } slot)
+            {
+                if (!sel.Slots.TryGetValue(slot, out var list)) sel.Slots[slot] = list = new();
+                list.Add(node);
+            }
+            else sel.Children.Add(node);
+        }
+        else if (sel is not null)
+            (Parent(Root, sel) ?? Root).Children.Add(node);
+        else
+            Root.Children.Add(node);
 
-        target.Children.Add(node);
         SelectedId = node.Id;
+        ActiveSlot = null;
         Notify();
     }
 
@@ -85,7 +103,7 @@ public sealed class DesignSession
             return;
         }
 
-        Parent(Root, node)?.Children.Remove(node);
+        ContainingList(Root, node)?.Remove(node);
         if (SelectedId == id) SelectedId = null;
         Notify();
     }
@@ -93,13 +111,13 @@ public sealed class DesignSession
     public void Move(string id, int dir)
     {
         var node = Find(Root, id);
-        var parent = node is null ? null : Parent(Root, node);
-        if (node is null || parent is null) return;
+        var list = node is null ? null : ContainingList(Root, node);
+        if (node is null || list is null) return;
 
-        var i = parent.Children.IndexOf(node);
+        var i = list.IndexOf(node);
         var j = i + dir;
-        if (j < 0 || j >= parent.Children.Count) return;
-        (parent.Children[i], parent.Children[j]) = (parent.Children[j], parent.Children[i]);
+        if (j < 0 || j >= list.Count) return;
+        (list[i], list[j]) = (list[j], list[i]);
         Notify();
     }
 
@@ -164,6 +182,9 @@ public sealed class DesignSession
             node.Params[key] = ParamCodec.FromJson(el, prop.PropertyType);
         }
         node.Children = dto.Children.Select(ToEditable).ToList();
+        if (dto.Slots is not null)
+            foreach (var (slot, kids) in dto.Slots)
+                node.Slots[slot] = kids.Select(ToEditable).ToList();
         return node;
     }
 
@@ -196,12 +217,28 @@ public sealed class DesignSession
         }
         if (n.Children.Count > 0)
             dict["children"] = n.Children.Select(ToDto).ToList();
+
+        var filledSlots = n.Slots.Where(s => s.Value.Count > 0).ToList();
+        if (filledSlots.Count > 0)
+            dict["slots"] = filledSlots.ToDictionary(s => s.Key, s => (object)s.Value.Select(ToDto).ToList());
+
         return dict;
     }
 
     private static EditableNode? Find(EditableNode n, string id) =>
-        n.Id == id ? n : n.Children.Select(c => Find(c, id)).FirstOrDefault(x => x is not null);
+        n.Id == id ? n : n.AllChildren.Select(c => Find(c, id)).FirstOrDefault(x => x is not null);
 
     private static EditableNode? Parent(EditableNode n, EditableNode target) =>
-        n.Children.Contains(target) ? n : n.Children.Select(c => Parent(c, target)).FirstOrDefault(x => x is not null);
+        n.AllChildren.Contains(target) ? n : n.AllChildren.Select(c => Parent(c, target)).FirstOrDefault(x => x is not null);
+
+    // The list (default Children or a named slot) that directly holds `target`.
+    private static List<EditableNode>? ContainingList(EditableNode n, EditableNode target)
+    {
+        if (n.Children.Contains(target)) return n.Children;
+        foreach (var list in n.Slots.Values)
+            if (list.Contains(target)) return list;
+        foreach (var child in n.AllChildren)
+            if (ContainingList(child, target) is { } found) return found;
+        return null;
+    }
 }

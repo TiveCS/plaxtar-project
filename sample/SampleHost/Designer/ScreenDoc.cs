@@ -24,4 +24,5 @@ public sealed class NodeDto
     [JsonPropertyName("style")] public string? Style { get; set; }
     [JsonPropertyName("params")] public Dictionary<string, JsonElement> Params { get; set; } = new();
     [JsonPropertyName("children")] public List<NodeDto> Children { get; set; } = new();
+    [JsonPropertyName("slots")] public Dictionary<string, List<NodeDto>>? Slots { get; set; }
 }

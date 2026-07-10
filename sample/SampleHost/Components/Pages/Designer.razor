@@ -98,6 +98,26 @@
                 }
                 else
                 {
+                var slots = Session.NamedSlots(sel.Component);
+                var hasCC = Session.CanContain(sel.Component!);
+                @if (hasCC || slots.Count > 0)
+                {
+                    <div class="ph slots-h">Insert into</div>
+                    <div class="slotpick">
+                        @if (hasCC)
+                        {
+                            <button class="slotbtn @(Session.ActiveSlot is null ? "act" : "")"
+                                    @onclick="() => Session.SelectSlot(null)">ChildContent (@sel.Children.Count)</button>
+                        }
+                        @foreach (var sn in slots)
+                        {
+                            var cnt = sel.Slots.TryGetValue(sn, out var l) ? l.Count : 0;
+                            <button class="slotbtn @(Session.ActiveSlot == sn ? "act" : "")"
+                                    @onclick="() => Session.SelectSlot(sn)">@sn (@cnt)</button>
+                        }
+                    </div>
+                }
+
                 var editable = EditableParams(sel.Component!);
                 @if (editable.Count == 0)
                 {
@@ -183,6 +203,10 @@
     .ptarget { display: flex; align-items: center; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 13px; color: #5b6cf0; padding: 6px 4px; border-bottom: 1px solid #eef0f4; margin-bottom: 6px; }
     .pactions button { font: inherit; border: 1px solid #e2e5ec; background: #fff; border-radius: 5px; width: 24px; height: 22px; cursor: pointer; margin-left: 2px; }
     .pactions .del { color: #c0392b; border-color: #f3caca; }
+    .slots-h { margin-top: 4px; }
+    .slotpick { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 4px 8px; }
+    .slotbtn { font: inherit; font-size: 11px; font-family: ui-monospace, monospace; border: 1px solid #e2e5ec; background: #fff; color: #565a66; border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+    .slotbtn.act { border-color: #5b6cf0; background: #eaecfd; color: #4550c8; }
     .prow { padding: 6px 4px; }
     .prow label { display: block; font-size: 11px; color: #565a66; margin-bottom: 4px; }
     .prow .ptype { color: #b0b4bd; font-family: ui-monospace, monospace; }
@@ -296,33 +320,34 @@
     private Dictionary<string, object?> BuildParams(EditableNode node, Type type)
     {
         var p = new Dictionary<string, object?>(node.Params);
-        var hasChildContent = type.GetProperty("ChildContent") is not null;
 
-        if (node.Children.Count > 0 && hasChildContent)
-        {
-            p["ChildContent"] = (RenderFragment)(b =>
-            {
-                foreach (var child in node.Children)
-                    b.AddContent(0, RenderNode(child));
-            });
-        }
-        else if (hasChildContent)
-        {
-            p["ChildContent"] = (RenderFragment)(b =>
-            {
-                b.OpenElement(0, "span");
-                b.AddAttribute(1, "class", "pd-empty");
-                b.AddContent(2, $"empty {node.Component} — add into it");
-                b.CloseElement();
-            });
-        }
+        if (type.GetProperty("ChildContent") is not null)
+            p["ChildContent"] = node.Children.Count > 0 ? Frag(node.Children) : EmptyFrag($"empty {node.Component} — add into it");
+
+        foreach (var (slot, kids) in node.Slots)
+            if (kids.Count > 0 && type.GetProperty(slot) is not null)
+                p[slot] = Frag(kids);
+
         return p;
     }
+
+    private RenderFragment Frag(List<EditableNode> kids) => b =>
+    {
+        foreach (var child in kids) b.AddContent(0, RenderNode(child));
+    };
+
+    private RenderFragment EmptyFrag(string text) => b =>
+    {
+        b.OpenElement(0, "span");
+        b.AddAttribute(1, "class", "pd-empty");
+        b.AddContent(2, text);
+        b.CloseElement();
+    };
 
     private IEnumerable<(EditableNode node, int depth)> Flatten(EditableNode n, int depth)
     {
         yield return (n, depth);
-        foreach (var child in n.Children)
+        foreach (var child in n.AllChildren)
             foreach (var pair in Flatten(child, depth + 1))
                 yield return pair;
     }
