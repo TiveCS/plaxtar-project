@@ -1,0 +1,40 @@
+@namespace SampleHost.Designer
+@inject ComponentTypeResolver Resolver
+@inject DesignSession Session
+
+@* Renders an EditableNode: a selectable wrapper around the live DynamicComponent.
+   Children render into ChildContent (only if the component actually has it). *@
+
+<div class="pd-node @(Session.SelectedId == Node.Id ? "pd-sel" : "")"
+     @onclick="Select" @onclick:stopPropagation="true">
+    <span class="pd-tag">@Node.Component</span>
+    <DynamicComponent Type="_type" Parameters="BuildParams()" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EditableNode Node { get; set; } = default!;
+
+    private Type _type = default!;
+    protected override void OnParametersSet() => _type = Resolver.Resolve(Node.Component);
+
+    private void Select() => Session.Select(Node.Id);
+
+    private Dictionary<string, object?> BuildParams()
+    {
+        var p = new Dictionary<string, object?>(Node.Params);
+
+        if (Node.Children.Count > 0 && _type.GetProperty("ChildContent") is not null)
+        {
+            p["ChildContent"] = (RenderFragment)(builder =>
+            {
+                foreach (var child in Node.Children)
+                {
+                    builder.OpenComponent<EditableTreeRenderer>(0);
+                    builder.AddAttribute(1, nameof(Node), child);
+                    builder.CloseComponent();
+                }
+            });
+        }
+        return p;
+    }
+}

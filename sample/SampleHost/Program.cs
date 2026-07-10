@@ -22,6 +22,9 @@ builder.Services.AddSingleton(sp => new SampleHost.Designer.ComponentCatalog(
     sp.GetRequiredService<SampleHost.Designer.RazorSourceIndex>(),
     namespaceFilter: "SampleHost.SampleUi"));
 
+// #5 composer: per-circuit editing state.
+builder.Services.AddScoped<SampleHost.Designer.DesignSession>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

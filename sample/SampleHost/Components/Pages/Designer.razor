@@ -1,0 +1,188 @@
+@page "/designer"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using SampleHost.Designer
+@inject DesignSession Session
+@inject ComponentCatalog Catalog
+@inject ComponentTypeResolver Resolver
+@inject IWebHostEnvironment Env
+@implements IDisposable
+
+<PageTitle>Composer — @Session.Screen</PageTitle>
+
+<div class="composer">
+    <!-- toolbar -->
+    <div class="bar">
+        <span class="scr">@Session.Screen<span class="st">.@Session.State</span></span>
+        <span class="spacer"></span>
+        @if (_saved is not null) { <span class="okmsg">saved → @_saved</span> }
+        <button class="btn" @onclick="SaveAsync">Save</button>
+    </div>
+
+    <div class="split">
+        <!-- palette -->
+        <div class="pane palette">
+            <div class="ph">Catalog</div>
+            @foreach (var c in Catalog.Components)
+            {
+                <button class="pitem" @onclick="() => Session.Add(c.Name)">
+                    @c.Name
+                    @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
+                </button>
+            }
+        </div>
+
+        <!-- canvas -->
+        <div class="pane canvas" @onclick="() => Session.Select(null)">
+            <LayoutView Layout="_shellType">
+                <EditableTreeRenderer Node="Session.Root" />
+            </LayoutView>
+        </div>
+
+        <!-- props -->
+        <div class="pane props">
+            <div class="ph">Properties</div>
+            @if (Session.Selected is { } sel)
+            {
+                <div class="ptarget">
+                    &lt;@sel.Component&gt;
+                    <div class="pactions">
+                        <button title="up" @onclick="() => Session.Move(sel.Id, -1)">↑</button>
+                        <button title="down" @onclick="() => Session.Move(sel.Id, 1)">↓</button>
+                        <button title="remove" class="del" @onclick="() => Session.Remove(sel.Id)">✕</button>
+                    </div>
+                </div>
+
+                var editable = EditableParams(sel.Component);
+                @if (editable.Count == 0)
+                {
+                    <p class="muted">no primitive/enum params</p>
+                }
+                else
+                {
+                    @foreach (var pi in editable)
+                    {
+                        var ptype = ParamType(sel.Component, pi.Name);
+                        var current = sel.Params.GetValueOrDefault(pi.Name);
+                        <div class="prow">
+                            <label>@pi.Name <span class="ptype">@pi.Type</span></label>
+                            @if (pi.Kind == ParamKind.Enum)
+                            {
+                                <select @onchange="e => Session.SetParam(sel.Id, pi.Name, Enum.Parse(Underlying(ptype), e.Value!.ToString()!))">
+                                    @foreach (var opt in pi.EnumOptions!)
+                                    {
+                                        <option value="@opt" selected="@(current?.ToString() == opt)">@opt</option>
+                                    }
+                                </select>
+                            }
+                            else if (ptype == typeof(bool))
+                            {
+                                <input type="checkbox" checked="@((current as bool?) ?? false)"
+                                       @onchange="e => Session.SetParam(sel.Id, pi.Name, (bool)e.Value!)" />
+                            }
+                            else if (IsNumeric(ptype))
+                            {
+                                <input type="number" value="@current"
+                                       @onchange="e => Session.SetParam(sel.Id, pi.Name, ParseNum(ptype, e.Value?.ToString()))" />
+                            }
+                            else
+                            {
+                                <input type="text" value="@current"
+                                       @onchange="e => Session.SetParam(sel.Id, pi.Name, e.Value?.ToString())" />
+                            }
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <p class="muted">Click a component on the canvas. Click a Catalog item to add it into the selected container.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .composer { font-family: system-ui, sans-serif; }
+    .bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #e2e5ec; background: #fff; }
+    .bar .scr { font-family: ui-monospace, monospace; font-size: 13px; }
+    .bar .st { color: #8a8f9c; }
+    .spacer { flex: 1; }
+    .okmsg { font-size: 12px; color: #16884a; }
+    .btn { font: inherit; font-size: 13px; font-weight: 550; padding: 6px 14px; border-radius: 7px; border: 1px solid #5b6cf0; background: #5b6cf0; color: #fff; cursor: pointer; }
+    .split { display: grid; grid-template-columns: 180px 1fr 240px; height: calc(100vh - 46px); }
+    .pane { overflow: auto; }
+    .palette { border-right: 1px solid #e2e5ec; background: #fafbfc; padding: 6px; }
+    .props { border-left: 1px solid #e2e5ec; background: #fff; padding: 6px 10px; }
+    .ph { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #8a8f9c; font-weight: 600; padding: 6px 4px; }
+    .pitem { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; font: inherit; font-size: 13px; border: 0; background: transparent; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
+    .pitem:hover { background: #eef0f4; }
+    .pitem .cc { margin-left: auto; font-size: 9px; color: #5b6cf0; background: #eaecfd; padding: 1px 5px; border-radius: 4px; }
+    .canvas { background: #eef0f4; }
+    .ptarget { display: flex; align-items: center; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 13px; color: #5b6cf0; padding: 6px 4px; border-bottom: 1px solid #eef0f4; margin-bottom: 6px; }
+    .pactions button { font: inherit; border: 1px solid #e2e5ec; background: #fff; border-radius: 5px; width: 24px; height: 22px; cursor: pointer; margin-left: 2px; }
+    .pactions .del { color: #c0392b; border-color: #f3caca; }
+    .prow { padding: 6px 4px; }
+    .prow label { display: block; font-size: 11px; color: #565a66; margin-bottom: 4px; }
+    .prow .ptype { color: #b0b4bd; font-family: ui-monospace, monospace; }
+    .prow input[type=text], .prow input[type=number], .prow select { width: 100%; font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid #e2e5ec; border-radius: 6px; }
+    .muted { color: #8a8f9c; font-size: 12.5px; padding: 4px; }
+
+    /* selection wrapper (edit mode only; not exported) */
+    ::deep .pd-node { position: relative; outline: 1px dashed transparent; border-radius: 4px; }
+    ::deep .pd-node:hover { outline-color: #b9c0f5; }
+    ::deep .pd-node.pd-sel { outline: 2px solid #5b6cf0; }
+    ::deep .pd-node > .pd-tag { position: absolute; top: -8px; left: 6px; font: 10px ui-monospace, monospace; background: #5b6cf0; color: #fff; padding: 1px 5px; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 2; }
+    ::deep .pd-node:hover > .pd-tag, ::deep .pd-node.pd-sel > .pd-tag { opacity: 1; }
+</style>
+
+@code {
+    private Type _shellType = typeof(SampleHost.SampleUi.SampleLayout);
+    private string? _saved;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        var dir = DesignPaths.DesignsDir(Env.ContentRootPath);
+        await Session.LoadAsync(Path.Combine(dir, "audit-log.default.json"));
+        if (Session.Shell is { } s) _shellType = Resolver.Resolve(s);
+    }
+
+    private void OnChanged() { _saved = null; InvokeAsync(StateHasChanged); }
+
+    private async Task SaveAsync()
+    {
+        var dir = DesignPaths.DesignsDir(Env.ContentRootPath);
+        _saved = Path.GetFileName(await Session.SaveAsync(dir));
+        StateHasChanged();
+    }
+
+    private List<ParamInfo> EditableParams(string component) =>
+        Session.Info(component)?.Params
+            .Where(p => p.Kind is ParamKind.Primitive or ParamKind.Enum)
+            .ToList() ?? new();
+
+    private Type ParamType(string component, string name) =>
+        Resolver.Resolve(component).GetProperty(name)!.PropertyType;
+
+    private static Type Underlying(Type t) => Nullable.GetUnderlyingType(t) ?? t;
+
+    private static bool IsNumeric(Type t)
+    {
+        var u = Underlying(t);
+        return u == typeof(int) || u == typeof(long) || u == typeof(double) || u == typeof(decimal) || u == typeof(float);
+    }
+
+    private static object? ParseNum(Type t, string? s)
+    {
+        var u = Underlying(t);
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        return u == typeof(int) ? int.Parse(s)
+             : u == typeof(long) ? long.Parse(s)
+             : u == typeof(double) ? double.Parse(s)
+             : u == typeof(float) ? float.Parse(s)
+             : u == typeof(decimal) ? decimal.Parse(s)
+             : s;
+    }
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

@@ -16,7 +16,7 @@
       {
         "component": "Button",
         "src": "Components/SampleUi/Button.razor",
-        "params": { "Text": "Save Changes" }
+        "params": { "Text": "Save Now" }
       }
     ]
   }
