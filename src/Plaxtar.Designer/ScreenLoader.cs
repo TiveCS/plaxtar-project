@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Loads a `plaxtar.designer/v1` file and materializes it into a runtime DesignNode
 // tree, coercing each JSON param value to the target [Parameter]'s CLR type.

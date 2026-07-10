@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Converts primitive/enum param values between JSON (schema encoding) and CLR
 // values usable by DynamicComponent. Enums use the `{ "$enum": "Type.Member" }`

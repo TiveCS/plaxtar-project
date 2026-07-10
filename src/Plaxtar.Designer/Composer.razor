@@ -1,11 +1,10 @@
 @page "/designer"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
-@using SampleHost.Designer
-@using Microsoft.AspNetCore.Components.Rendering
 @inject DesignSession Session
 @inject ComponentCatalog Catalog
 @inject ComponentTypeResolver Resolver
 @inject ScreenStore Store
+@inject PlaxtarDesignerOptions Options
 @inject IWebHostEnvironment Env
 @implements IDisposable
 
@@ -231,7 +230,7 @@
 </style>
 
 @code {
-    private Type _shellType = typeof(SampleHost.SampleUi.SampleLayout);
+    private Type? _shellType;
     private string? _saved;
 
     private string _designsDir = "";
@@ -243,12 +242,17 @@
         Session.Changed += OnChanged;
         _designsDir = DesignPaths.DesignsDir(Env.ContentRootPath);
         RefreshScreens();
-        await Session.LoadAsync(Path.Combine(_designsDir, "audit-log.default.json"));
+
+        // Open the first existing screen; otherwise start a fresh untitled one.
+        if (_screens.FirstOrDefault() is { } first)
+            await Session.LoadAsync(Path.Combine(_designsDir, first.FileBase + ".json"));
+        else
+            Session.New("untitled", Options.DefaultShellName);
         ApplyShell();
     }
 
     private void RefreshScreens() => _screens = Store.List(_designsDir).ToList();
-    private void ApplyShell() { if (Session.Shell is { } s) _shellType = Resolver.Resolve(s); }
+    private void ApplyShell() => _shellType = Session.Shell is { } s ? Resolver.Resolve(s) : null;
 
     private async Task LoadScreenAsync(ScreenRef s)
     {
@@ -259,8 +263,8 @@
 
     private void NewScreen()
     {
-        Session.New(_newName, "SampleLayout");
-        _shellType = typeof(SampleHost.SampleUi.SampleLayout);
+        Session.New(_newName, Options.DefaultShellName);
+        ApplyShell();
         _newName = "";
     }
 

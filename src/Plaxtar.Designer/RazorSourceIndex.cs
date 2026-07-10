@@ -1,4 +1,4 @@
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Best-effort component name -> source .razor path, by scanning the content root.
 // (A real FE may prefer a build-time source manifest; this convention works in dev.)

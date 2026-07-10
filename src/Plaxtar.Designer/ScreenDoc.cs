@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Serializable schema `plaxtar.designer/v1` (SPEC §7). Kept separate from the
 // runtime DesignNode: on disk a node references a component by *name*, not Type.

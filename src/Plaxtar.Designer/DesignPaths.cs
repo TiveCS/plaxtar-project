@@ -1,4 +1,4 @@
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Locates the repo's `designs/` directory by walking up from the content root
 // (stops at the folder containing `designs/` or the repo root marked by `.git`).

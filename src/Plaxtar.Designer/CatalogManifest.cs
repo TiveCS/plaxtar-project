@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Writes designs/_catalog.json — the manifest the AI agent reads (alongside design
 // trees) to resolve param types and import paths during codegen.

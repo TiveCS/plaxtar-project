@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Scoped editing state for one open screen: the mutable tree, selection, and
 // mutations. Raises Changed so the canvas/props re-render. Loads from and saves
@@ -9,17 +9,20 @@ public sealed class DesignSession
 {
     private readonly ComponentTypeResolver _resolver;
     private readonly ComponentCatalog _catalog;
+    private readonly PlaxtarDesignerOptions _options;
 
-    public DesignSession(ComponentTypeResolver resolver, ComponentCatalog catalog)
+    public DesignSession(ComponentTypeResolver resolver, ComponentCatalog catalog, PlaxtarDesignerOptions options)
     {
         _resolver = resolver;
         _catalog = catalog;
+        _options = options;
+        Shell = options.DefaultShellName;
     }
 
     public string Screen { get; private set; } = "untitled";
     public string State { get; private set; } = "default";
-    public string? Shell { get; private set; } = "SampleLayout";
-    public EditableNode Root { get; private set; } = new() { Component = "Stack", Params = { ["Gap"] = 16 } };
+    public string? Shell { get; private set; }
+    public EditableNode Root { get; private set; } = new() { Element = "div" };
     public string? SelectedId { get; private set; }
 
     public event Action? Changed;
@@ -149,7 +152,7 @@ public sealed class DesignSession
             ["schema"] = "plaxtar.designer/v1",
             ["screen"] = Screen,
             ["state"] = State,
-            ["fe"] = "SampleHost",
+            ["fe"] = _options.Fe,
             ["shell"] = Shell,
             ["root"] = ToDto(Root),
         };

@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Components;
 
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Resolves a component name (simple or full) to its Type by reflecting over the
 // given assemblies. v1 precursor to the #4 Catalog; here it only needs name->Type.

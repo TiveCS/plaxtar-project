@@ -1,4 +1,4 @@
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Mutable design-tree node. A node is EITHER a component (Component set) OR a raw
 // HTML element (Element = tag, with CssClass/Style). Params holds primitive/enum

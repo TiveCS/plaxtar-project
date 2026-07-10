@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Components;
 
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // A parameter's editing kind (SPEC §6). Drives both the props panel and codegen.
 public enum ParamKind { Primitive, Enum, ChildContent, Slot, TemplatedSlot, Event, Complex }

@@ -1,4 +1,4 @@
-namespace SampleHost.Designer;
+namespace Plaxtar.Designer;
 
 // Lists the screen files under designs/ (ignoring manifest/underscore files).
 public sealed record ScreenRef(string Screen, string State, string FileBase);
