@@ -1,20 +1,48 @@
 @page "/design"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using SampleHost.Designer
-@using SampleHost.SampleUi
+@inject ScreenLoader Loader
+@inject ComponentTypeResolver Resolver
+@inject IWebHostEnvironment Env
 
-@* #1 render-gate spike: render a hardcoded Design Tree via DynamicComponent,
-   inside a real Shell via LayoutView, with a component that uses scoped DI + async load. *@
+@* #2 walking skeleton: render a Design Tree loaded from designs/<screen>.default.json
+   (schema plaxtar.designer/v1) via the same TreeNodeRenderer proven in #1. *@
 
-<PageTitle>Design — render gate</PageTitle>
+<PageTitle>Design — @(_doc?.Screen ?? "loading")</PageTitle>
 
-<LayoutView Layout="typeof(SampleLayout)">
-    <TreeNodeRenderer Node="_tree" />
-</LayoutView>
+@if (_error is not null)
+{
+    <pre style="color:#b00;padding:20px">@_error</pre>
+}
+else if (_tree is null)
+{
+    <p style="padding:20px">loading design…</p>
+}
+else
+{
+    <LayoutView Layout="_shellType">
+        <TreeNodeRenderer Node="_tree" />
+    </LayoutView>
+}
 
 @code {
-    private static readonly DesignNode _tree =
-        DesignNode.Of(typeof(Stack), new() { ["Gap"] = 16 },
-            DesignNode.Of(typeof(Button), new() { ["Text"] = "Save" }),
-            DesignNode.Of(typeof(DataPanel)));
+    private DesignNode? _tree;
+    private ScreenDoc? _doc;
+    private Type _shellType = typeof(SampleHost.SampleUi.SampleLayout);
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var dir = DesignPaths.DesignsDir(Env.ContentRootPath);
+            var path = Path.Combine(dir, "audit-log.default.json");
+            (_doc, _tree) = await Loader.LoadAsync(path);
+            if (_doc.Shell is { } shell) _shellType = Resolver.Resolve(shell);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.ToString();
+        }
+    }
 }

@@ -9,6 +9,11 @@ builder.Services.AddRazorComponents()
 // Stand-in "heavy dependency" for the #1 render-gate spike.
 builder.Services.AddScoped<SampleHost.Services.ISampleData, SampleHost.Services.SampleData>();
 
+// #2 walking skeleton: resolve components by name + load design trees from JSON.
+builder.Services.AddSingleton(new SampleHost.Designer.ComponentTypeResolver(
+    new[] { typeof(SampleHost.SampleUi.Stack).Assembly }));
+builder.Services.AddScoped<SampleHost.Designer.ScreenLoader>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

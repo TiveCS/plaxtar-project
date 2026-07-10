@@ -1,0 +1,23 @@
+{
+  "schema": "plaxtar.designer/v1",
+  "screen": "audit-log",
+  "state": "default",
+  "fe": "SampleHost",
+  "shell": "SampleLayout",
+  "root": {
+    "component": "Stack",
+    "params": { "Gap": 16 },
+    "children": [
+      {
+        "component": "Button",
+        "src": "Components/SampleUi/Button.razor",
+        "params": { "Text": "Save" }
+      },
+      {
+        "component": "DataPanel",
+        "src": "Components/SampleUi/DataPanel.razor",
+        "params": {}
+      }
+    ]
+  }
+}
