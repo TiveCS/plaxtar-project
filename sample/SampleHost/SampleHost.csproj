@@ -7,8 +7,21 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- Dev-only gating (#10, ADR 0001): the Composer is referenced only in Debug,
+       so a Release build contains no Plaxtar.Designer assembly and no /designer route. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <ProjectReference Include="..\..\src\Plaxtar.Designer\Plaxtar.Designer.csproj" />
   </ItemGroup>
+
+  <!-- These demo pages consume the Composer package; drop them from Release builds
+       so nothing references Plaxtar.Designer once the reference is gone. -->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Content Remove="Components\Pages\Catalog.razor" />
+    <Content Remove="Components\Pages\Design.razor" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>$(DefineConstants);PLAXTAR_DESIGNER</DefineConstants>
+  </PropertyGroup>
 
 </Project>

@@ -7,10 +7,15 @@
     <IsPackable>true</IsPackable>
     <PackageId>Plaxtar.Designer</PackageId>
     <Description>Dev-only in-process visual Composer for Blazor: assemble real components into screens and export a codegen-grade Design Tree.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
