@@ -1,0 +1,33 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+
+# .NET / tooling
+.vs/
+.vscode/
+*.dll
+*.pdb
+project.lock.json
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# Blazor / web
+wwwroot/dist/
+node_modules/
+*.log
+
+# Plaxtar Designer — exported screenshots are regenerable; keep the JSON, ignore PNGs
+designs/*.png
+
+# OS
+.DS_Store
+Thumbs.db
