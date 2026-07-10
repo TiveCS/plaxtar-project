@@ -85,6 +85,14 @@
 
                 @if (sel.IsElement)
                 {
+                    <div class="ph slots-h">Layout</div>
+                    <div class="slotpick">
+                        <button class="slotbtn" @onclick="() => Session.SetStyle(sel.Id, null)">none</button>
+                        <button class="slotbtn" @onclick='() => Session.SetStyle(sel.Id, "display:flex;flex-direction:row;gap:12px")'>flex row</button>
+                        <button class="slotbtn" @onclick='() => Session.SetStyle(sel.Id, "display:flex;flex-direction:column;gap:12px")'>flex col</button>
+                        <button class="slotbtn" @onclick='() => Session.SetStyle(sel.Id, "display:grid;grid-template-columns:repeat(2,1fr);gap:12px")'>grid 2</button>
+                        <button class="slotbtn" @onclick='() => Session.SetStyle(sel.Id, "display:grid;grid-template-columns:repeat(3,1fr);gap:12px")'>grid 3</button>
+                    </div>
                     <div class="prow">
                         <label>class</label>
                         <input type="text" value="@sel.CssClass" placeholder="e.g. grid grid-cols-2 gap-4"
