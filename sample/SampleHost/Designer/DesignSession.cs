@@ -73,7 +73,18 @@ public sealed class DesignSession
     public void Remove(string id)
     {
         var node = Find(Root, id);
-        if (node is null || node == Root) return;
+        if (node is null) return;
+
+        // Deleting the root resets it to an empty <div> (root must always exist,
+        // but you're never locked into the type it started as).
+        if (node == Root)
+        {
+            Root = new EditableNode { Element = "div" };
+            SelectedId = null;
+            Notify();
+            return;
+        }
+
         Parent(Root, node)?.Children.Remove(node);
         if (SelectedId == id) SelectedId = null;
         Notify();

@@ -11,8 +11,22 @@
     },
     "children": [
       {
-        "component": "DataPanel",
-        "src": "Components/SampleUi/DataPanel.razor"
+        "element": "div",
+        "style": "display: flex; gap: 16px;",
+        "children": [
+          {
+            "component": "Badge",
+            "src": "Components/SampleUi/Badge.razor"
+          },
+          {
+            "component": "Badge",
+            "src": "Components/SampleUi/Badge.razor"
+          },
+          {
+            "component": "Badge",
+            "src": "Components/SampleUi/Badge.razor"
+          }
+        ]
       }
     ]
   }
