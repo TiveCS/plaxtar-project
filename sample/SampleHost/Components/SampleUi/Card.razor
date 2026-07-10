@@ -1,0 +1,22 @@
+@namespace SampleHost.SampleUi
+
+<div class="card @(Bordered ? "bordered" : "")">
+    @if (HeaderContent is not null)
+    {
+        <div class="card-h">@HeaderContent</div>
+    }
+    <div class="card-b">@ChildContent</div>
+</div>
+
+<style>
+    .card { border-radius: 10px; background: #fff; overflow: hidden; }
+    .card.bordered { border: 1px solid #e2e5ec; }
+    .card-h { padding: 10px 14px; border-bottom: 1px solid #eef0f4; font-weight: 600; font-size: 14px; }
+    .card-b { padding: 14px; }
+</style>
+
+@code {
+    [Parameter] public bool Bordered { get; set; } = true;
+    [Parameter] public RenderFragment? HeaderContent { get; set; }   // named slot
+    [Parameter] public RenderFragment? ChildContent { get; set; }    // default slot
+}

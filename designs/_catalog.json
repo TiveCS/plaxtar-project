@@ -1,0 +1,101 @@
+{
+  "schema": "plaxtar.designer/catalog-v1",
+  "components": [
+    {
+      "Name": "Badge",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/Badge.razor",
+      "Params": [
+        {
+          "Name": "Text",
+          "Type": "string",
+          "Kind": "Primitive"
+        },
+        {
+          "Name": "Variant",
+          "Type": "BadgeVariant",
+          "Kind": "Enum",
+          "EnumOptions": [
+            "Ok",
+            "Warn",
+            "Danger"
+          ]
+        },
+        {
+          "Name": "OnClick",
+          "Type": "EventCallback",
+          "Kind": "Event"
+        }
+      ]
+    },
+    {
+      "Name": "Button",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/Button.razor",
+      "Params": [
+        {
+          "Name": "Text",
+          "Type": "string",
+          "Kind": "Primitive"
+        }
+      ]
+    },
+    {
+      "Name": "Card",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/Card.razor",
+      "Params": [
+        {
+          "Name": "Bordered",
+          "Type": "bool",
+          "Kind": "Primitive"
+        },
+        {
+          "Name": "HeaderContent",
+          "Type": "RenderFragment",
+          "Kind": "Slot"
+        },
+        {
+          "Name": "ChildContent",
+          "Type": "RenderFragment",
+          "Kind": "ChildContent"
+        }
+      ]
+    },
+    {
+      "Name": "DataPanel",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/DataPanel.razor",
+      "Params": []
+    },
+    {
+      "Name": "SampleLayout",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/SampleLayout.razor",
+      "Params": [
+        {
+          "Name": "Body",
+          "Type": "RenderFragment",
+          "Kind": "Slot"
+        }
+      ]
+    },
+    {
+      "Name": "Stack",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/Stack.razor",
+      "Params": [
+        {
+          "Name": "Gap",
+          "Type": "int",
+          "Kind": "Primitive"
+        },
+        {
+          "Name": "ChildContent",
+          "Type": "RenderFragment",
+          "Kind": "ChildContent"
+        }
+      ]
+    }
+  ]
+}

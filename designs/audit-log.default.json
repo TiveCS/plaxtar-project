@@ -6,17 +6,17 @@
   "shell": "SampleLayout",
   "root": {
     "component": "Stack",
-    "params": { "Gap": 16 },
+    "params": { "Gap": 48 },
     "children": [
-      {
-        "component": "Button",
-        "src": "Components/SampleUi/Button.razor",
-        "params": { "Text": "Save" }
-      },
       {
         "component": "DataPanel",
         "src": "Components/SampleUi/DataPanel.razor",
         "params": {}
+      },
+      {
+        "component": "Button",
+        "src": "Components/SampleUi/Button.razor",
+        "params": { "Text": "Save Changes" }
       }
     ]
   }

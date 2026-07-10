@@ -1,0 +1,86 @@
+@page "/catalog"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using SampleHost.Designer
+@inject ComponentCatalog Cat
+@inject IWebHostEnvironment Env
+
+<PageTitle>Catalog</PageTitle>
+
+<div class="wrap">
+    <div class="head">
+        <h1>Component Catalog <small>@Cat.Components.Count components (reflected)</small></h1>
+        <button class="export" @onclick="ExportAsync">Export _catalog.json</button>
+    </div>
+
+    @if (_exported is not null)
+    {
+        <p class="ok">Wrote @_exported</p>
+    }
+
+    @foreach (var c in Cat.Components)
+    {
+        <div class="card">
+            <div class="c-head">
+                <span class="name">@c.Name</span>
+                <span class="asm">@c.Assembly</span>
+                <span class="src">@(c.Src ?? "—")</span>
+            </div>
+            @if (c.Params.Count == 0)
+            {
+                <p class="muted">no parameters</p>
+            }
+            else
+            {
+                <table>
+                    <thead><tr><th>Param</th><th>Type</th><th>Kind</th><th>Options</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in c.Params)
+                        {
+                            <tr>
+                                <td>@p.Name</td>
+                                <td class="mono">@p.Type</td>
+                                <td><span class="kind k-@p.Kind.ToString().ToLowerInvariant()">@p.Kind</span></td>
+                                <td class="mono">@(p.EnumOptions is null ? "" : string.Join(", ", p.EnumOptions))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .wrap { max-width: 900px; margin: 24px auto; padding: 0 20px; font-family: system-ui, sans-serif; color: #1b1d23; }
+    .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .head h1 { font-size: 20px; margin: 0; }
+    .head small { color: #8a8f9c; font-weight: 400; font-size: 13px; }
+    .export { font: inherit; font-size: 13px; font-weight: 550; padding: 8px 14px; border-radius: 8px; border: 1px solid #5b6cf0; background: #5b6cf0; color: #fff; cursor: pointer; }
+    .ok { color: #16884a; font-size: 13px; margin: 0 0 14px; }
+    .card { border: 1px solid #e2e5ec; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; background: #fff; }
+    .c-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+    .c-head .name { font-weight: 650; font-size: 15px; }
+    .c-head .asm { font-size: 11px; color: #8a8f9c; background: #f0f1f5; padding: 1px 7px; border-radius: 5px; }
+    .c-head .src { margin-left: auto; font-size: 11px; color: #8a8f9c; font-family: ui-monospace, monospace; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: #565a66; font-size: 11px; text-transform: uppercase; padding: 5px 8px; border-bottom: 1px solid #e2e5ec; }
+    td { padding: 5px 8px; border-bottom: 1px solid #eef0f4; }
+    .mono { font-family: ui-monospace, monospace; font-size: 12px; }
+    .muted { color: #8a8f9c; font-size: 13px; margin: 0; }
+    .kind { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 5px; background: #eef0f4; color: #565a66; }
+    .kind.k-primitive { background: #e7f0ff; color: #2d63c8; }
+    .kind.k-enum { background: #fdeede; color: #b5721c; }
+    .kind.k-childcontent, .kind.k-slot, .kind.k-templatedslot { background: #e9f7ee; color: #16884a; }
+    .kind.k-event { background: #f3e9fb; color: #7d3bbf; }
+    .kind.k-complex { background: #fde8e8; color: #c0392b; }
+</style>
+
+@code {
+    private string? _exported;
+
+    private async Task ExportAsync()
+    {
+        var dir = DesignPaths.DesignsDir(Env.ContentRootPath);
+        _exported = await CatalogManifest.WriteAsync(dir, Cat);
+    }
+}

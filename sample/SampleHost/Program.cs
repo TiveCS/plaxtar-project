@@ -14,6 +14,14 @@ builder.Services.AddSingleton(new SampleHost.Designer.ComponentTypeResolver(
     new[] { typeof(SampleHost.SampleUi.Stack).Assembly }));
 builder.Services.AddScoped<SampleHost.Designer.ScreenLoader>();
 
+// #4 Catalog: reflect the component library + index .razor sources for the manifest.
+builder.Services.AddSingleton(sp => new SampleHost.Designer.RazorSourceIndex(
+    sp.GetRequiredService<IWebHostEnvironment>().ContentRootPath));
+builder.Services.AddSingleton(sp => new SampleHost.Designer.ComponentCatalog(
+    new[] { typeof(SampleHost.SampleUi.Stack).Assembly },
+    sp.GetRequiredService<SampleHost.Designer.RazorSourceIndex>(),
+    namespaceFilter: "SampleHost.SampleUi"));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -31,5 +39,13 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// #4 dev endpoint: regenerate designs/_catalog.json headlessly (also usable by CI/agents).
+app.MapGet("/_catalog/export", async (SampleHost.Designer.ComponentCatalog cat, IWebHostEnvironment env) =>
+{
+    var dir = SampleHost.Designer.DesignPaths.DesignsDir(env.ContentRootPath);
+    var path = await SampleHost.Designer.CatalogManifest.WriteAsync(dir, cat);
+    return Results.Ok(new { written = path, count = cat.Components.Count });
+});
 
 app.Run();
