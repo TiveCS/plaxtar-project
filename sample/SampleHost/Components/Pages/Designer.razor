@@ -19,7 +19,7 @@
     </div>
 
     <div class="split">
-        <!-- palette -->
+        <!-- palette + layers -->
         <div class="pane palette">
             <div class="ph">Catalog</div>
             @foreach (var c in Catalog.Components)
@@ -27,6 +27,17 @@
                 <button class="pitem" @onclick="() => Session.Add(c.Name)">
                     @c.Name
                     @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
+                </button>
+            }
+
+            <div class="ph layers-h">Layers</div>
+            @foreach (var (node, depth) in Flatten(Session.Root, 0))
+            {
+                <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
+                        style="padding-left:@(depth * 14 + 8)px"
+                        @onclick="() => Session.Select(node.Id)">
+                    <span class="lname">@node.Component</span>
+                    @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
                 </button>
             }
         </div>
@@ -117,6 +128,11 @@
     .pitem { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; font: inherit; font-size: 13px; border: 0; background: transparent; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
     .pitem:hover { background: #eef0f4; }
     .pitem .cc { margin-left: auto; font-size: 9px; color: #5b6cf0; background: #eaecfd; padding: 1px 5px; border-radius: 4px; }
+    .layers-h { margin-top: 8px; border-top: 1px solid #e2e5ec; padding-top: 10px; }
+    .lrow { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; border: 0; background: transparent; font-family: ui-monospace, monospace; font-size: 12px; padding: 5px 8px; border-radius: 5px; cursor: pointer; color: inherit; }
+    .lrow:hover { background: #eef0f4; }
+    .lrow.lsel { background: #eaecfd; color: #4550c8; }
+    .lrow .lc { margin-left: auto; font-size: 9px; color: #8a8f9c; background: #eef0f4; padding: 0 5px; border-radius: 8px; }
     .canvas { background: #eef0f4; }
     .ptarget { display: flex; align-items: center; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 13px; color: #5b6cf0; padding: 6px 4px; border-bottom: 1px solid #eef0f4; margin-bottom: 6px; }
     .pactions button { font: inherit; border: 1px solid #e2e5ec; background: #fff; border-radius: 5px; width: 24px; height: 22px; cursor: pointer; margin-left: 2px; }
@@ -154,6 +170,14 @@
         var dir = DesignPaths.DesignsDir(Env.ContentRootPath);
         _saved = Path.GetFileName(await Session.SaveAsync(dir));
         StateHasChanged();
+    }
+
+    private IEnumerable<(EditableNode node, int depth)> Flatten(EditableNode n, int depth)
+    {
+        yield return (n, depth);
+        foreach (var child in n.Children)
+            foreach (var pair in Flatten(child, depth + 1))
+                yield return pair;
     }
 
     private List<ParamInfo> EditableParams(string component) =>
