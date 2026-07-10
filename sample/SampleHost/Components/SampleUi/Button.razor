@@ -1,6 +1,8 @@
 @namespace SampleHost.SampleUi
 
-<button class="btn">@Text</button>
+<button class="btn" @onclick="OnClick">
+    @Text@(_clicks > 0 ? $"  ({_clicks})" : "")
+</button>
 
 <style>
     .btn { font: inherit; font-size: 13px; font-weight: 550; padding: 7px 14px; border-radius: 7px;
@@ -9,4 +11,8 @@
 
 @code {
     [Parameter] public string Text { get; set; } = "Button";
+
+    // Interactivity probe: proves click events round-trip through DynamicComponent + LayoutView.
+    private int _clicks;
+    private void OnClick() => _clicks++;
 }
