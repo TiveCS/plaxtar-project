@@ -1,0 +1,20 @@
+@page "/design"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using SampleHost.Designer
+@using SampleHost.SampleUi
+
+@* #1 render-gate spike: render a hardcoded Design Tree via DynamicComponent,
+   inside a real Shell via LayoutView, with a component that uses scoped DI + async load. *@
+
+<PageTitle>Design — render gate</PageTitle>
+
+<LayoutView Layout="typeof(SampleLayout)">
+    <TreeNodeRenderer Node="_tree" />
+</LayoutView>
+
+@code {
+    private static readonly DesignNode _tree =
+        DesignNode.Of(typeof(Stack), new() { ["Gap"] = 16 },
+            DesignNode.Of(typeof(Button), new() { ["Text"] = "Save" }),
+            DesignNode.Of(typeof(DataPanel)));
+}

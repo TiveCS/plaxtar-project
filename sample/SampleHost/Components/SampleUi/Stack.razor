@@ -1,0 +1,10 @@
+@namespace SampleHost.SampleUi
+
+<div style="display:flex;flex-direction:column;gap:@(Gap)px">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public int Gap { get; set; } = 8;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

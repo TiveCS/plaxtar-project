@@ -1,0 +1,44 @@
+@namespace SampleHost.SampleUi
+@using SampleHost.Services
+@inject ISampleData Data
+
+@* Proves the hard part of #1: a component that injects a SCOPED service and loads data
+   asynchronously in OnInitializedAsync still renders correctly when hosted by the
+   design route inside a LayoutView. *@
+
+<div class="panel">
+    <h3>Audit entries <small>(scoped DI + async load)</small></h3>
+    @if (_rows is null)
+    {
+        <p class="muted">loading…</p>
+    }
+    else
+    {
+        <table>
+            <thead><tr><th>Time</th><th>Actor</th><th>Action</th></tr></thead>
+            <tbody>
+                @foreach (var r in _rows)
+                {
+                    <tr><td>@r.Time</td><td>@r.Actor</td><td>@r.Action</td></tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<style>
+    .panel { border: 1px solid #e2e5ec; border-radius: 10px; padding: 14px 16px; background: #fff; }
+    .panel h3 { margin: 0 0 10px; font-size: 15px; }
+    .panel h3 small { color: #8a8f9c; font-weight: 400; font-size: 12px; }
+    .panel table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .panel th { text-align: left; color: #565a66; font-size: 11px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid #e2e5ec; }
+    .panel td { padding: 6px 8px; border-bottom: 1px solid #eef0f4; }
+    .muted { color: #8a8f9c; }
+</style>
+
+@code {
+    private List<AuditRow>? _rows;
+
+    protected override async Task OnInitializedAsync()
+        => _rows = await Data.GetAsync();
+}

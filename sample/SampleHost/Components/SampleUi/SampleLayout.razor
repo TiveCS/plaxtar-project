@@ -1,0 +1,33 @@
+@namespace SampleHost.SampleUi
+@inherits LayoutComponentBase
+
+@* Stand-in for a real .Base.UI Shell (MainLayout with @Body). The design tree renders into @Body. *@
+
+<div class="shell">
+    <aside class="nav">
+        <div class="brand">Plaxtar</div>
+        <a>Dashboard</a>
+        <a class="active">Audit</a>
+        <a>Reports</a>
+        <a>Settings</a>
+    </aside>
+    <div class="main">
+        <header class="hdr"><span>Audit / <b>Log</b></span><span class="avatar"></span></header>
+        <div class="body">
+            @Body
+        </div>
+    </div>
+</div>
+
+<style>
+    .shell { display: grid; grid-template-columns: 180px 1fr; min-height: 100vh; font-family: system-ui, sans-serif; }
+    .nav { background: #202330; color: #c7ccdb; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; }
+    .nav .brand { color: #fff; font-weight: 700; margin-bottom: 14px; }
+    .nav a { color: #808799; padding: 7px 9px; border-radius: 6px; font-size: 14px; cursor: default; }
+    .nav a.active { background: rgba(255,255,255,.09); color: #fff; }
+    .main { display: flex; flex-direction: column; }
+    .hdr { height: 48px; border-bottom: 1px solid #e2e5ec; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; color: #565a66; }
+    .hdr b { color: #1b1d23; }
+    .hdr .avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg,#f0a35b,#f05b8b); }
+    .body { padding: 20px; }
+</style>

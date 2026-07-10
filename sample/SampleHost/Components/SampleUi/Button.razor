@@ -1,0 +1,12 @@
+@namespace SampleHost.SampleUi
+
+<button class="btn">@Text</button>
+
+<style>
+    .btn { font: inherit; font-size: 13px; font-weight: 550; padding: 7px 14px; border-radius: 7px;
+           border: 1px solid #5b6cf0; background: #5b6cf0; color: #fff; cursor: pointer; }
+</style>
+
+@code {
+    [Parameter] public string Text { get; set; } = "Button";
+}

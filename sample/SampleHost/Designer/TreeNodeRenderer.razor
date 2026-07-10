@@ -1,0 +1,30 @@
+@namespace SampleHost.Designer
+
+@* Recursively renders a Design Tree: each node -> DynamicComponent, children -> ChildContent RenderFragment.
+   This is the render primitive the whole Composer is built on (reused by #2/#5). *@
+
+<DynamicComponent Type="Node.Type" Parameters="BuildParams()" />
+
+@code {
+    [Parameter, EditorRequired] public DesignNode Node { get; set; } = default!;
+
+    private Dictionary<string, object?> BuildParams()
+    {
+        var p = new Dictionary<string, object?>(Node.Params);
+
+        if (Node.Children.Count > 0)
+        {
+            p["ChildContent"] = (RenderFragment)(builder =>
+            {
+                foreach (var child in Node.Children)
+                {
+                    builder.OpenComponent<TreeNodeRenderer>(0);
+                    builder.AddAttribute(1, nameof(Node), child);
+                    builder.CloseComponent();
+                }
+            });
+        }
+
+        return p;
+    }
+}
