@@ -5,6 +5,7 @@
 @inject DesignSession Session
 @inject ComponentCatalog Catalog
 @inject ComponentTypeResolver Resolver
+@inject ScreenStore Store
 @inject IWebHostEnvironment Env
 @implements IDisposable
 
@@ -20,8 +21,22 @@
     </div>
 
     <div class="split">
-        <!-- palette + layers -->
+        <!-- screens + palette + layers -->
         <div class="pane palette">
+            <div class="ph">Screens</div>
+            @foreach (var s in _screens)
+            {
+                <div class="srow @(s.Screen == Session.Screen && s.State == Session.State ? "ssel" : "")">
+                    <button class="sopen" @onclick="() => LoadScreenAsync(s)">@s.Screen<span class="sst">.@s.State</span></button>
+                    <button class="sdel" title="delete" @onclick="() => DeleteScreenAsync(s)">✕</button>
+                </div>
+            }
+            <div class="newscreen">
+                <input placeholder="new screen name" value="@_newName"
+                       @oninput="e => _newName = e.Value?.ToString() ?? string.Empty" />
+                <button @onclick="NewScreen">+ New</button>
+            </div>
+
             <div class="ph">Catalog</div>
             @foreach (var c in Catalog.Components)
             {
@@ -149,6 +164,16 @@
     .pitem { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; font: inherit; font-size: 13px; border: 0; background: transparent; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
     .pitem:hover { background: #eef0f4; }
     .pitem .cc { margin-left: auto; font-size: 9px; color: #5b6cf0; background: #eaecfd; padding: 1px 5px; border-radius: 4px; }
+    .srow { display: flex; align-items: center; border-radius: 6px; }
+    .srow:hover { background: #eef0f4; }
+    .srow.ssel { background: #eaecfd; }
+    .srow .sopen { flex: 1; text-align: left; font: inherit; font-family: ui-monospace, monospace; font-size: 12px; border: 0; background: transparent; padding: 6px 8px; cursor: pointer; color: inherit; }
+    .srow .sst { color: #8a8f9c; }
+    .srow .sdel { border: 0; background: transparent; color: #c0392b; cursor: pointer; padding: 0 8px; opacity: 0; }
+    .srow:hover .sdel { opacity: 1; }
+    .newscreen { display: flex; gap: 4px; padding: 6px 4px 2px; }
+    .newscreen input { flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 4px 7px; border: 1px solid #e2e5ec; border-radius: 6px; }
+    .newscreen button { font: inherit; font-size: 12px; border: 1px solid #5b6cf0; background: #5b6cf0; color: #fff; border-radius: 6px; padding: 4px 8px; cursor: pointer; white-space: nowrap; }
     .layers-h { margin-top: 8px; border-top: 1px solid #e2e5ec; padding-top: 10px; }
     .lrow { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; border: 0; background: transparent; font-family: ui-monospace, monospace; font-size: 12px; padding: 5px 8px; border-radius: 5px; cursor: pointer; color: inherit; }
     .lrow:hover { background: #eef0f4; }
@@ -177,20 +202,48 @@
     private Type _shellType = typeof(SampleHost.SampleUi.SampleLayout);
     private string? _saved;
 
+    private string _designsDir = "";
+    private List<ScreenRef> _screens = new();
+    private string _newName = "";
+
     protected override async Task OnInitializedAsync()
     {
         Session.Changed += OnChanged;
-        var dir = DesignPaths.DesignsDir(Env.ContentRootPath);
-        await Session.LoadAsync(Path.Combine(dir, "audit-log.default.json"));
-        if (Session.Shell is { } s) _shellType = Resolver.Resolve(s);
+        _designsDir = DesignPaths.DesignsDir(Env.ContentRootPath);
+        RefreshScreens();
+        await Session.LoadAsync(Path.Combine(_designsDir, "audit-log.default.json"));
+        ApplyShell();
+    }
+
+    private void RefreshScreens() => _screens = Store.List(_designsDir).ToList();
+    private void ApplyShell() { if (Session.Shell is { } s) _shellType = Resolver.Resolve(s); }
+
+    private async Task LoadScreenAsync(ScreenRef s)
+    {
+        await Session.LoadAsync(Path.Combine(_designsDir, s.FileBase + ".json"));
+        ApplyShell();
+        _saved = null;
+    }
+
+    private void NewScreen()
+    {
+        Session.New(_newName, "SampleLayout");
+        _shellType = typeof(SampleHost.SampleUi.SampleLayout);
+        _newName = "";
+    }
+
+    private void DeleteScreenAsync(ScreenRef s)
+    {
+        Store.Delete(_designsDir, s.FileBase);
+        RefreshScreens();
     }
 
     private void OnChanged() { _saved = null; InvokeAsync(StateHasChanged); }
 
     private async Task SaveAsync()
     {
-        var dir = DesignPaths.DesignsDir(Env.ContentRootPath);
-        _saved = Path.GetFileName(await Session.SaveAsync(dir));
+        _saved = Path.GetFileName(await Session.SaveAsync(_designsDir));
+        RefreshScreens();
         StateHasChanged();
     }
 
@@ -243,12 +296,24 @@
     private Dictionary<string, object?> BuildParams(EditableNode node, Type type)
     {
         var p = new Dictionary<string, object?>(node.Params);
-        if (node.Children.Count > 0 && type.GetProperty("ChildContent") is not null)
+        var hasChildContent = type.GetProperty("ChildContent") is not null;
+
+        if (node.Children.Count > 0 && hasChildContent)
         {
             p["ChildContent"] = (RenderFragment)(b =>
             {
                 foreach (var child in node.Children)
                     b.AddContent(0, RenderNode(child));
+            });
+        }
+        else if (hasChildContent)
+        {
+            p["ChildContent"] = (RenderFragment)(b =>
+            {
+                b.OpenElement(0, "span");
+                b.AddAttribute(1, "class", "pd-empty");
+                b.AddContent(2, $"empty {node.Component} — add into it");
+                b.CloseElement();
             });
         }
         return p;

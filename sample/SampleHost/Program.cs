@@ -25,6 +25,9 @@ builder.Services.AddSingleton(sp => new SampleHost.Designer.ComponentCatalog(
 // #5 composer: per-circuit editing state.
 builder.Services.AddScoped<SampleHost.Designer.DesignSession>();
 
+// #8 screens: list/manage screen files.
+builder.Services.AddSingleton<SampleHost.Designer.ScreenStore>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

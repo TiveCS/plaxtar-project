@@ -33,6 +33,16 @@ public sealed class DesignSession
 
     public void Select(string? id) { SelectedId = id; Notify(); }
 
+    public void New(string screen, string? shell)
+    {
+        Screen = string.IsNullOrWhiteSpace(screen) ? "untitled" : screen.Trim();
+        State = "default";
+        Shell = shell;
+        Root = new EditableNode { Element = "div" };   // neutral root, not tied to a Stack component
+        SelectedId = null;
+        Notify();
+    }
+
     public void Add(string component) => Place(new EditableNode { Component = component, Src = Info(component)?.Src });
     public void AddElement(string tag) => Place(new EditableNode { Element = tag });
 
