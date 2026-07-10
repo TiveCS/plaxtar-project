@@ -1,6 +1,7 @@
 @page "/designer"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using SampleHost.Designer
+@using Microsoft.AspNetCore.Components.Rendering
 @inject DesignSession Session
 @inject ComponentCatalog Catalog
 @inject ComponentTypeResolver Resolver
@@ -45,7 +46,7 @@
         <!-- canvas -->
         <div class="pane canvas" @onclick="() => Session.Select(null)">
             <LayoutView Layout="_shellType">
-                <EditableTreeRenderer Node="Session.Root" />
+                @RenderNode(Session.Root)
             </LayoutView>
         </div>
 
@@ -144,11 +145,11 @@
     .muted { color: #8a8f9c; font-size: 12.5px; padding: 4px; }
 
     /* selection wrapper (edit mode only; not exported) */
-    ::deep .pd-node { position: relative; outline: 1px dashed transparent; border-radius: 4px; }
-    ::deep .pd-node:hover { outline-color: #b9c0f5; }
-    ::deep .pd-node.pd-sel { outline: 2px solid #5b6cf0; }
-    ::deep .pd-node > .pd-tag { position: absolute; top: -8px; left: 6px; font: 10px ui-monospace, monospace; background: #5b6cf0; color: #fff; padding: 1px 5px; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 2; }
-    ::deep .pd-node:hover > .pd-tag, ::deep .pd-node.pd-sel > .pd-tag { opacity: 1; }
+    .pd-node { position: relative; outline: 1px dashed transparent; border-radius: 4px; }
+    .pd-node:hover { outline-color: #b9c0f5; }
+    .pd-node.pd-sel { outline: 2px solid #5b6cf0; }
+    .pd-node > .pd-tag { position: absolute; top: -8px; left: 6px; font: 10px ui-monospace, monospace; background: #5b6cf0; color: #fff; padding: 1px 5px; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 2; }
+    .pd-node:hover > .pd-tag, .pd-node.pd-sel > .pd-tag { opacity: 1; }
 </style>
 
 @code {
@@ -170,6 +171,45 @@
         var dir = DesignPaths.DesignsDir(Env.ContentRootPath);
         _saved = Path.GetFileName(await Session.SaveAsync(dir));
         StateHasChanged();
+    }
+
+    // Canvas tree rendered inline by the page so click handlers are page-bound
+    // (interactive), not authored inside a child component (which isn't).
+    private RenderFragment RenderNode(EditableNode node) => builder =>
+    {
+        var type = Resolver.Resolve(node.Component);
+        var selected = Session.SelectedId == node.Id;
+
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "pd-node" + (selected ? " pd-sel" : ""));
+        builder.AddAttribute(2, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => Session.Select(node.Id)));
+        builder.AddEventStopPropagationAttribute(3, "onclick", true);
+
+        builder.OpenElement(4, "span");
+        builder.AddAttribute(5, "class", "pd-tag");
+        builder.AddContent(6, node.Component);
+        builder.CloseElement();
+
+        builder.OpenComponent<DynamicComponent>(7);
+        builder.AddComponentParameter(8, "Type", type);
+        builder.AddComponentParameter(9, "Parameters", BuildParams(node, type));
+        builder.CloseComponent();
+
+        builder.CloseElement();
+    };
+
+    private Dictionary<string, object?> BuildParams(EditableNode node, Type type)
+    {
+        var p = new Dictionary<string, object?>(node.Params);
+        if (node.Children.Count > 0 && type.GetProperty("ChildContent") is not null)
+        {
+            p["ChildContent"] = (RenderFragment)(b =>
+            {
+                foreach (var child in node.Children)
+                    b.AddContent(0, RenderNode(child));
+            });
+        }
+        return p;
     }
 
     private IEnumerable<(EditableNode node, int depth)> Flatten(EditableNode n, int depth)
