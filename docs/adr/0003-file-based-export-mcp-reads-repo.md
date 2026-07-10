@@ -2,7 +2,11 @@
 
 ## Status
 
-accepted
+accepted · **amended** — MCP dropped from the MVP (see amendment below)
+
+## Amendment (files-only, no MCP)
+
+A filesystem-capable coding agent (Claude Code) can read the exported files directly, so the MCP server is redundant and is **removed from the MVP**. The contract is now: the agent reads `designs/*.json` + a `designs/_catalog.json` manifest, guided by the schema + codegen rules documented in the repo `CLAUDE.md`. MCP remains a possible future addition only for non-filesystem/remote/sandboxed agents. The rest of this ADR (file-based export, git-versioned, decoupled from the running app) stands.
 
 ## Decision
 

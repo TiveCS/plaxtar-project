@@ -12,7 +12,7 @@ The team builds Blazor UI **code-first**: components exist (`.razor`) but no des
 
 ### 1.2 Goal
 
-A dev-only visual **Composer** that assembles the team's **already-coded** Blazor components into screens, rendered **live**, and exports a **codegen-grade JSON tree** an AI agent consumes over **MCP** to generate the real `.razor` page. The thing on the canvas *is* the real component (via `DynamicComponent`), so "exact UI/UX" is literal, not approximate.
+A dev-only visual **Composer** that assembles the team's **already-coded** Blazor components into screens, rendered **live**, and exports a **codegen-grade JSON tree** an AI agent reads (as a repo file) to generate the real `.razor` page. The thing on the canvas *is* the real component (via `DynamicComponent`), so "exact UI/UX" is literal, not approximate.
 
 ### 1.3 Non-goals (MVP)
 
@@ -26,7 +26,7 @@ A dev-only visual **Composer** that assembles the team's **already-coded** Blazo
 
 1. In a real FE app running in dev, open `/design`, drop real components into the real Shell, set params, see live render — with the app's real auth/DI/API/DB available.
 2. Export a screen+state to `designs/<screen>.<state>.json`.
-3. An AI agent reads that JSON via MCP and generates a `.razor` page that matches the designed screen 1:1 (component identity, params, nesting, layout).
+3. An AI agent reads that JSON file (guided by `CLAUDE.md`) and generates a `.razor` page that matches the designed screen 1:1 (component identity, params, nesting, layout).
 
 ---
 
@@ -42,7 +42,7 @@ A dev-only visual **Composer** that assembles the team's **already-coded** Blazo
 4. Drop components from the **Catalog** into the canvas; nest into containers and component slots.
 5. Set params in the **Props** panel; flip **States** (default / modal-open / loading / empty) to design each.
 6. **Export** → writes `designs/<screen>.<state>.json` (+ optional `.png`) into the repo.
-7. Tell the AI agent "build `designs/audit-log.json`"; agent reads via MCP → emits real `.razor`.
+7. Tell the AI agent "build `designs/audit-log.json`"; agent reads the file (+ `designs/_catalog.json`) → emits real `.razor`.
 
 ---
 
@@ -66,10 +66,10 @@ Modules you don't run (`.UI.LMS`, `.UI.KMS`) are absent — correct, you're not 
 ### 3.3 Data flow (see ADR 0003)
 
 ```
-[Composer @ /design] ──export──> designs/*.json (+ *.png) in repo ──read──> [MCP server] ──> [AI agent] ──> real .razor
+[Composer @ /design] ──export──> designs/*.json (+ _catalog.json, *.png) in repo ──read──> [AI agent] ──> real .razor
 ```
 
-Exports are files in the repo: git-versioned, work offline, decoupled from a running app. The MCP server reads files; it does **not** connect to the running app.
+Exports are files in the repo: git-versioned, work offline, decoupled from a running app. The agent reads the files directly (no MCP); `CLAUDE.md` carries the schema + codegen rules.
 
 ### 3.4 Component map
 
@@ -81,7 +81,7 @@ Exports are files in the repo: git-versioned, work offline, decoupled from a run
 | **Screens list** | Manage independent Screens (open/new/switch/rename/delete). One open at a time; all persist as files. |
 | **States** | Named variants of a Screen (default/modal-open/loading/empty/custom); each exports its own tree. |
 | **Export** | Serialize Design Tree → JSON (+ screenshot) to `designs/`. |
-| **MCP server** | Read `designs/` → serve catalog + screen trees to the agent. |
+| **Catalog manifest** | Export `designs/_catalog.json` from reflection so the agent has param types + import paths. |
 
 ---
 
@@ -209,22 +209,22 @@ Value encodings: enums as `{ "$enum": "Type.Member" }`; raw/complex as `{ "$raw"
 
 ---
 
-## 9. MCP server
+## 9. Agent access (files, no MCP)
 
-A small MCP server (stdio) run by the agent, pointed at the repo. It reads `designs/` and the Catalog manifest; it does not touch the running app.
+The agent (Claude Code) reads the exported files **directly** — there is no MCP server in the MVP (ADR 0003, amended). A filesystem-capable agent re-reading a repo file through MCP adds nothing. MCP remains a possible future addition only for non-filesystem/remote/sandboxed agents.
 
-### 9.1 Tools
+### 9.1 The file contract
 
-| Tool | Input | Output |
-|---|---|---|
-| `list_screens` | — | `[{ screen, states[], fe, shell, route, updatedAt }]` |
-| `get_screen` | `screen`, `state?` (default `default`) | full Design Tree JSON (§7) |
-| `get_catalog` | `fe?` | `[{ component, src, assembly, params:[{name,type,kind,enumOptions?,default?}] }]` |
-| `get_screenshot` | `screen`, `state?` | path/bytes of the PNG (optional) |
+- `designs/<screen>.<state>.json` — the Design Tree (§7).
+- `designs/_catalog.json` — Catalog manifest: `[{ component, src, assembly, params:[{name,type,kind,enumOptions?,default?}] }]`.
+- `designs/<screen>.<state>.png` — optional visual cross-check.
+- `CLAUDE.md` — the schema + codegen rules the agent auto-loads (the "decoder ring").
+
+Workflow: user says "build `designs/<screen>.<state>.json`" → agent reads that file + `designs/_catalog.json` → generates `.razor` per the contract.
 
 ### 9.2 Agent contract (codegen)
 
-Given `get_screen`, the agent generates a `.razor` page:
+Given a Design Tree file, the agent generates a `.razor` page:
 
 1. Emit `@page "<route>"` and `@layout <shell>` (from `shell`).
 2. `@using` for each distinct `assembly`/namespace referenced by nodes (`src`/`assembly`).
@@ -264,7 +264,7 @@ Plaxtar/                         (this repo)
 ├── docs/adr/*.md
 ├── src/
 │   ├── Plaxtar.Designer/        NuGet: Composer route, Catalog, Canvas, Props, Export
-│   └── Plaxtar.Designer.Mcp/    MCP server reading designs/
+│   └── (no MCP server — agent reads designs/ files directly)
 └── sample/
     └── SampleHost/              tiny Blazor app + dummy components to develop against
 ```
@@ -284,13 +284,13 @@ Plaxtar/                         (this repo)
 - Flow layout with panel-edited CSS incl. `position`.
 - Screens list (open/new/switch/rename/delete); States (default + modal/loading/empty).
 - Export Design Tree JSON (+ optional screenshot) to `designs/`.
-- MCP server: `list_screens`, `get_screen`, `get_catalog`.
+- Catalog manifest `designs/_catalog.json` + codegen contract in `CLAUDE.md` (no MCP server).
 
 **Deferred:**
 - Design-system/token authoring & variants (§16).
 - Multi-screen linked flows / routing between screens.
 - Templated `RenderFragment<T>` and complex-object param editors (beyond raw/bind).
-- Live MCP into a running app (files-only in MVP).
+- MCP server entirely (files-only for a filesystem agent; add only for remote/sandboxed agents later).
 - React support.
 
 ---
@@ -313,7 +313,7 @@ Plaxtar/                         (this repo)
 3. **Canvas MVP:** drop + select + set primitive/enum params; live render.
 4. **Nesting:** container layout editing + RenderFragment slots.
 5. **Screens/States + Export:** file persistence, screenshot optional.
-6. **MCP server:** tools + agent codegen contract; end-to-end test (design → export → agent emits matching `.razor`).
+6. **Catalog manifest + codegen contract** (`CLAUDE.md`); end-to-end test (design → export files → agent reads → emits matching `.razor`).
 
 ---
 
