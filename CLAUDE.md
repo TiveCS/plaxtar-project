@@ -25,7 +25,14 @@ When asked to "build `designs/<screen>.<state>.json`", read that file **and** `d
 }
 ```
 
-`Node`:
+A `Node` is **either** a component (`component`) **or** a raw HTML element (`element`, with optional `class`/`style`). Element nodes codegen to `<tag class="…" style="…">children</tag>` and are how plain styled containers (Tailwind/Bootstrap/custom `<div>`s) are represented.
+
+```jsonc
+// element node
+{ "element": "div", "class": "grid grid-cols-2 gap-4", "children": [<Node>] }
+```
+
+`Node` (component form):
 ```jsonc
 {
   "component": "AuditLogTable",       // type name as written in markup
@@ -45,7 +52,7 @@ Value encodings: `{ "$enum": "Type.Member" }` · `{ "$bind": "field" }` · `{ "$
 
 1. Emit `@page "<route>"` (if present) and `@layout <shell>` (map `shell` to the layout type; drop the assembly prefix if it's a namespace).
 2. Emit `@using` for each distinct namespace/assembly referenced by nodes (resolve from `src`/`_catalog.json`).
-3. Walk `root`: for each node emit `<Component Param="…" @bind-X="field" OnX="Handler"> … </Component>`.
+3. Walk `root`: for an **element** node emit `<tag class="…" style="…"> … </tag>`; for a **component** node emit `<Component Param="…" @bind-X="field" OnX="Handler"> … </Component>`.
    - `params` -> attributes. Enums -> `Param="Type.Member"`. Strings/bools/numbers -> literals.
    - `bindings` -> `@bind-<Name>="field"`. `events` -> `<Name>="Handler"`.
    - `children` -> nested markup inside the tag. `slots.<Name>` -> `<Name> … </Name>`.

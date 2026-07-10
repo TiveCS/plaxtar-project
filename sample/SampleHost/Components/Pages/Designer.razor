@@ -31,13 +31,17 @@
                 </button>
             }
 
+            <div class="ph">Elements</div>
+            <button class="pitem" @onclick='() => Session.AddElement("div")'>&lt;div&gt; <span class="cc">container</span></button>
+            <button class="pitem" @onclick='() => Session.AddElement("section")'>&lt;section&gt; <span class="cc">container</span></button>
+
             <div class="ph layers-h">Layers</div>
             @foreach (var (node, depth) in Flatten(Session.Root, 0))
             {
                 <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
                         style="padding-left:@(depth * 14 + 8)px"
                         @onclick="() => Session.Select(node.Id)">
-                    <span class="lname">@node.Component</span>
+                    <span class="lname">@node.DisplayName</span>
                     @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
                 </button>
             }
@@ -56,7 +60,7 @@
             @if (Session.Selected is { } sel)
             {
                 <div class="ptarget">
-                    &lt;@sel.Component&gt;
+                    @sel.DisplayName
                     <div class="pactions">
                         <button title="up" @onclick="() => Session.Move(sel.Id, -1)">↑</button>
                         <button title="down" @onclick="() => Session.Move(sel.Id, 1)">↓</button>
@@ -64,7 +68,22 @@
                     </div>
                 </div>
 
-                var editable = EditableParams(sel.Component);
+                @if (sel.IsElement)
+                {
+                    <div class="prow">
+                        <label>class</label>
+                        <input type="text" value="@sel.CssClass" placeholder="e.g. grid grid-cols-2 gap-4"
+                               @onchange="e => Session.SetClass(sel.Id, e.Value?.ToString())" />
+                    </div>
+                    <div class="prow">
+                        <label>style</label>
+                        <input type="text" value="@sel.Style" placeholder="e.g. padding:16px"
+                               @onchange="e => Session.SetStyle(sel.Id, e.Value?.ToString())" />
+                    </div>
+                }
+                else
+                {
+                var editable = EditableParams(sel.Component!);
                 @if (editable.Count == 0)
                 {
                     <p class="muted">no primitive/enum params</p>
@@ -103,6 +122,7 @@
                             }
                         </div>
                     }
+                }
                 }
             }
             else
@@ -148,6 +168,7 @@
     .pd-node { position: relative; outline: 1px dashed transparent; border-radius: 4px; }
     .pd-node:hover { outline-color: #b9c0f5; }
     .pd-node.pd-sel { outline: 2px solid #5b6cf0; }
+    .pd-empty { display: block; padding: 12px; font: 11px ui-monospace, monospace; color: #a0a4ad; border: 1px dashed #cfd4de; border-radius: 6px; text-align: center; }
     .pd-node > .pd-tag { position: absolute; top: -8px; left: 6px; font: 10px ui-monospace, monospace; background: #5b6cf0; color: #fff; padding: 1px 5px; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 2; }
     .pd-node:hover > .pd-tag, .pd-node.pd-sel > .pd-tag { opacity: 1; }
 </style>
@@ -177,7 +198,6 @@
     // (interactive), not authored inside a child component (which isn't).
     private RenderFragment RenderNode(EditableNode node) => builder =>
     {
-        var type = Resolver.Resolve(node.Component);
         var selected = Session.SelectedId == node.Id;
 
         builder.OpenElement(0, "div");
@@ -187,13 +207,35 @@
 
         builder.OpenElement(4, "span");
         builder.AddAttribute(5, "class", "pd-tag");
-        builder.AddContent(6, node.Component);
+        builder.AddContent(6, node.DisplayName);
         builder.CloseElement();
 
-        builder.OpenComponent<DynamicComponent>(7);
-        builder.AddComponentParameter(8, "Type", type);
-        builder.AddComponentParameter(9, "Parameters", BuildParams(node, type));
-        builder.CloseComponent();
+        if (node.IsElement)
+        {
+            builder.OpenElement(7, node.Element!);
+            if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(8, "class", node.CssClass);
+            if (!string.IsNullOrWhiteSpace(node.Style)) builder.AddAttribute(9, "style", node.Style);
+            if (node.Children.Count == 0)
+            {
+                builder.OpenElement(10, "span");
+                builder.AddAttribute(11, "class", "pd-empty");
+                builder.AddContent(12, $"empty <{node.Element}> — add into it");
+                builder.CloseElement();
+            }
+            else
+            {
+                foreach (var child in node.Children) builder.AddContent(13, RenderNode(child));
+            }
+            builder.CloseElement();
+        }
+        else
+        {
+            var type = Resolver.Resolve(node.Component!);
+            builder.OpenComponent<DynamicComponent>(14);
+            builder.AddComponentParameter(15, "Type", type);
+            builder.AddComponentParameter(16, "Parameters", BuildParams(node, type));
+            builder.CloseComponent();
+        }
 
         builder.CloseElement();
     };

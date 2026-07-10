@@ -27,25 +27,37 @@ public sealed class DesignSession
 
     public ComponentInfo? Info(string component) => _catalog.Components.FirstOrDefault(c => c.Name == component);
     public bool CanContain(string component) => Info(component)?.Params.Any(p => p.Kind == ParamKind.ChildContent) == true;
+    public bool CanContainNode(EditableNode n) => n.IsElement || (n.Component is { } c && CanContain(c));
 
     public EditableNode? Selected => SelectedId is null ? null : Find(Root, SelectedId);
 
     public void Select(string? id) { SelectedId = id; Notify(); }
 
-    public void Add(string component)
-    {
-        var node = new EditableNode { Component = component, Src = Info(component)?.Src };
+    public void Add(string component) => Place(new EditableNode { Component = component, Src = Info(component)?.Src });
+    public void AddElement(string tag) => Place(new EditableNode { Element = tag });
 
+    private void Place(EditableNode node)
+    {
         // Add into the selected node if it accepts children, else into its parent, else root.
         var sel = Selected;
         EditableNode target =
-            sel is not null && CanContain(sel.Component) ? sel :
+            sel is not null && CanContainNode(sel) ? sel :
             sel is not null ? (Parent(Root, sel) ?? Root) :
             Root;
 
         target.Children.Add(node);
         SelectedId = node.Id;
         Notify();
+    }
+
+    public void SetClass(string id, string? value)
+    {
+        if (Find(Root, id) is { } n) { n.CssClass = string.IsNullOrWhiteSpace(value) ? null : value; Notify(); }
+    }
+
+    public void SetStyle(string id, string? value)
+    {
+        if (Find(Root, id) is { } n) { n.Style = string.IsNullOrWhiteSpace(value) ? null : value; Notify(); }
     }
 
     public void Remove(string id)
@@ -111,7 +123,18 @@ public sealed class DesignSession
 
     private EditableNode ToEditable(NodeDto dto)
     {
-        var type = _resolver.Resolve(dto.Component);
+        if (dto.Element is not null)
+        {
+            return new EditableNode
+            {
+                Element = dto.Element,
+                CssClass = dto.CssClass,
+                Style = dto.Style,
+                Children = dto.Children.Select(ToEditable).ToList(),
+            };
+        }
+
+        var type = _resolver.Resolve(dto.Component!);
         var node = new EditableNode { Component = dto.Component, Src = dto.Src };
         foreach (var (key, el) in dto.Params)
         {
@@ -125,8 +148,19 @@ public sealed class DesignSession
 
     private object ToDto(EditableNode n)
     {
-        var type = _resolver.Resolve(n.Component);
-        var dict = new Dictionary<string, object?> { ["component"] = n.Component };
+        var dict = new Dictionary<string, object?>();
+
+        if (n.IsElement)
+        {
+            dict["element"] = n.Element;
+            if (n.CssClass is not null) dict["class"] = n.CssClass;
+            if (n.Style is not null) dict["style"] = n.Style;
+            if (n.Children.Count > 0) dict["children"] = n.Children.Select(ToDto).ToList();
+            return dict;
+        }
+
+        var type = _resolver.Resolve(n.Component!);
+        dict["component"] = n.Component;
         if (n.Src is not null) dict["src"] = n.Src;
 
         if (n.Params.Count > 0)
