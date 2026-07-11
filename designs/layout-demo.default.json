@@ -12,8 +12,8 @@
         "element": "div",
         "layout": { "display": "grid", "columns": "repeat(2,1fr)", "gap": "12px" },
         "children": [
-          { "component": "Badge", "src": "Components/SampleUi/Badge.razor", "params": { "Text": "One", "Variant": { "$enum": "BadgeVariant.Ok" } } },
-          { "component": "Badge", "src": "Components/SampleUi/Badge.razor", "params": { "Text": "Two", "Variant": { "$enum": "BadgeVariant.Warn" } } }
+          { "component": "Badge", "src": "Components/SampleUi/Badge.razor", "params": { "Text": "One", "Variant": { "$enum": "Badge.BadgeVariant.Ok" } } },
+          { "component": "Badge", "src": "Components/SampleUi/Badge.razor", "params": { "Text": "Two", "Variant": { "$enum": "Badge.BadgeVariant.Warn" } } }
         ]
       },
       {

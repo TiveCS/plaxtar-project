@@ -27,7 +27,7 @@
         {
           "component": "Badge",
           "src": "Components/SampleUi/Badge.razor",
-          "params": { "Text": "Continue", "Variant": { "$enum": "BadgeVariant.Ok" } },
+          "params": { "Text": "Continue", "Variant": { "$enum": "Badge.BadgeVariant.Ok" } },
           "events": { "OnClick": "Confirm" }
         }
       ]

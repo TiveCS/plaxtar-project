@@ -96,6 +96,11 @@ public sealed class ComponentCatalog
             var args = string.Join(", ", t.GetGenericArguments().Select(FriendlyType));
             return $"{name}<{args}>";
         }
+        // A nested type (e.g. an enum declared inside a component) keeps its declaring
+        // chain so the agent writes Badge.BadgeVariant, not a dangling BadgeVariant.
+        if (t.IsNested && !t.IsGenericParameter)
+            return FriendlyType(t.DeclaringType!) + "." + t.Name;
+
         return t == typeof(string) ? "string"
              : t == typeof(int) ? "int"
              : t == typeof(bool) ? "bool"

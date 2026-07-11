@@ -25,7 +25,7 @@
         "src": "Components/SampleUi/Badge.razor",
         "params": {
           "Text": "Sign in",
-          "Variant": { "$enum": "BadgeVariant.Ok" }
+          "Variant": { "$enum": "Badge.BadgeVariant.Ok" }
         },
         "events": { "OnClick": "HandleSubmit" }
       }

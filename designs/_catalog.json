@@ -14,7 +14,7 @@
         },
         {
           "Name": "Variant",
-          "Type": "BadgeVariant",
+          "Type": "Badge.BadgeVariant",
           "Kind": "Enum",
           "EnumOptions": [
             "Ok",
@@ -188,7 +188,7 @@
         },
         {
           "Name": "Rules",
-          "Type": "Validation",
+          "Type": "TextField.Validation",
           "Kind": "Complex",
           "Bindable": false
         }

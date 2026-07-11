@@ -38,7 +38,17 @@ public static class ParamCodec
 
         var underlying = Nullable.GetUnderlyingType(target) ?? target;
         if (value is not null && underlying.IsEnum)
-            return new Dictionary<string, string> { ["$enum"] = $"{underlying.Name}.{value}" };
+            return new Dictionary<string, string> { ["$enum"] = $"{EnumTypeRef(underlying)}.{value}" };
         return value;
+    }
+
+    // Enum type reference "as written in markup": a nested enum keeps its declaring-type
+    // chain (Badge.BadgeVariant); a top-level enum is just its name (AuditRange). The
+    // assembly/namespace is dropped — the generated page @using-imports it.
+    private static string EnumTypeRef(Type t)
+    {
+        var names = new List<string>();
+        for (Type? cur = t; cur is not null; cur = cur.DeclaringType) names.Insert(0, cur.Name);
+        return string.Join('.', names);
     }
 }
