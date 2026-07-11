@@ -1,0 +1,18 @@
+@namespace AcmePortal.Ui
+
+<div class="alert alert-@Severity.ToString().ToLowerInvariant()">@Message</div>
+
+<style>
+    .alert { font-family: system-ui, sans-serif; font-size: 13.5px; padding: 10px 14px; border-radius: 8px; border: 1px solid transparent; }
+    .alert-info { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .alert-success { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .alert-warning { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+    .alert-error { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+</style>
+
+@code {
+    public enum Level { Info, Success, Warning, Error }
+
+    [Parameter] public string Message { get; set; } = "";          // primitive
+    [Parameter] public Level Severity { get; set; } = Level.Info;  // enum
+}

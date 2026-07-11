@@ -1,0 +1,14 @@
+@namespace AcmePortal.Ui
+
+<button class="btn" disabled="@Disabled" @onclick="OnClick">@Text</button>
+
+<style>
+    .btn { font: inherit; font-weight: 600; font-size: 14px; padding: 9px 18px; border: 0; border-radius: 8px; background: #0d9488; color: #fff; cursor: pointer; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+</style>
+
+@code {
+    [Parameter] public string Text { get; set; } = "Button";   // primitive
+    [Parameter] public bool Disabled { get; set; }              // primitive
+    [Parameter] public EventCallback OnClick { get; set; }      // event
+}

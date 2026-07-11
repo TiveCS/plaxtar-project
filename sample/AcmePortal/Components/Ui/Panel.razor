@@ -1,0 +1,22 @@
+@namespace AcmePortal.Ui
+
+<section class="panel">
+    <header class="panel-head">
+        <span class="panel-title">@Title</span>
+        @if (HeaderActions is not null) { <span class="panel-actions">@HeaderActions</span> }
+    </header>
+    <div class="panel-body">@ChildContent</div>
+</section>
+
+<style>
+    .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; font-family: system-ui, sans-serif; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #eef2f7; }
+    .panel-title { font-weight: 600; color: #0f172a; }
+    .panel-body { padding: 16px; }
+</style>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Panel";              // primitive
+    [Parameter] public RenderFragment? HeaderActions { get; set; }        // named slot
+    [Parameter] public RenderFragment? ChildContent { get; set; }         // default slot
+}

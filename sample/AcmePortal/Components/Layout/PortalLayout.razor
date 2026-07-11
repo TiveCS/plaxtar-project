@@ -1,0 +1,35 @@
+@namespace AcmePortal.Layout
+@inherits LayoutComponentBase
+@inject AcmePortal.Services.IAuthContext Auth
+
+@* The app's real Shell — a top bar (not a sidebar), and it consumes the injected
+   auth session. The Composer renders designs into @Body inside this. *@
+
+<div class="portal">
+    <header class="topbar">
+        <span class="logo">◆ Acme<b>Portal</b></span>
+        <nav class="topnav">
+            <a class="active">Overview</a>
+            <a>Customers</a>
+            <a>Billing</a>
+            <a>Settings</a>
+        </nav>
+        <span class="who">@Auth.UserName <em>· @Auth.Role</em></span>
+    </header>
+    <main class="content">
+        @Body
+    </main>
+</div>
+
+<style>
+    .portal { min-height: 100vh; background: #f1f5f9; font-family: system-ui, sans-serif; }
+    .topbar { display: flex; align-items: center; gap: 28px; height: 56px; padding: 0 20px; background: #0f172a; color: #e2e8f0; }
+    .topbar .logo { font-weight: 600; font-size: 15px; }
+    .topbar .logo b { color: #2dd4bf; }
+    .topnav { display: flex; gap: 6px; flex: 1; }
+    .topnav a { color: #94a3b8; padding: 6px 12px; border-radius: 7px; font-size: 14px; cursor: default; }
+    .topnav a.active { background: rgba(255,255,255,.08); color: #fff; }
+    .who { font-size: 13px; color: #cbd5e1; }
+    .who em { color: #64748b; font-style: normal; }
+    .content { padding: 24px; }
+</style>

@@ -1,0 +1,152 @@
+{
+  "schema": "plaxtar.designer/catalog-v1",
+  "components": [
+    {
+      "Name": "Alert",
+      "Assembly": "AcmePortal",
+      "Src": "Components/Ui/Alert.razor",
+      "Params": [
+        {
+          "Name": "Message",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Severity",
+          "Type": "Level",
+          "Kind": "Enum",
+          "EnumOptions": [
+            "Info",
+            "Success",
+            "Warning",
+            "Error"
+          ],
+          "Bindable": false
+        }
+      ]
+    },
+    {
+      "Name": "Panel",
+      "Assembly": "AcmePortal",
+      "Src": "Components/Ui/Panel.razor",
+      "Params": [
+        {
+          "Name": "Title",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "HeaderActions",
+          "Type": "RenderFragment",
+          "Kind": "Slot",
+          "Bindable": false
+        },
+        {
+          "Name": "ChildContent",
+          "Type": "RenderFragment",
+          "Kind": "ChildContent",
+          "Bindable": false
+        }
+      ]
+    },
+    {
+      "Name": "PrimaryButton",
+      "Assembly": "AcmePortal",
+      "Src": "Components/Ui/PrimaryButton.razor",
+      "Params": [
+        {
+          "Name": "Text",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Disabled",
+          "Type": "bool",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "OnClick",
+          "Type": "EventCallback",
+          "Kind": "Event",
+          "Bindable": false
+        }
+      ]
+    },
+    {
+      "Name": "StatCard",
+      "Assembly": "AcmePortal",
+      "Src": "Components/Ui/StatCard.razor",
+      "Params": [
+        {
+          "Name": "Title",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Value",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Delta",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Trend",
+          "Type": "TrendDir",
+          "Kind": "Enum",
+          "EnumOptions": [
+            "Up",
+            "Down",
+            "Flat"
+          ],
+          "Bindable": false
+        }
+      ]
+    },
+    {
+      "Name": "TextInput",
+      "Assembly": "AcmePortal",
+      "Src": "Components/Ui/TextInput.razor",
+      "Params": [
+        {
+          "Name": "Value",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": true
+        },
+        {
+          "Name": "Label",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Placeholder",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Kind",
+          "Type": "InputKind",
+          "Kind": "Enum",
+          "EnumOptions": [
+            "Text",
+            "Email",
+            "Password"
+          ],
+          "Bindable": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+@namespace AcmePortal.Ui
+
+<label class="fld">
+    @if (!string.IsNullOrEmpty(Label)) { <span class="fld-lbl">@Label</span> }
+    <input class="fld-in" type="@Kind.ToString().ToLowerInvariant()" value="@Value"
+           placeholder="@Placeholder" @onchange="OnInput" />
+</label>
+
+<style>
+    .fld { display: flex; flex-direction: column; gap: 5px; font-family: system-ui, sans-serif; }
+    .fld-lbl { font-size: 12px; font-weight: 500; color: #475569; }
+    .fld-in { font: inherit; font-size: 14px; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; }
+    .fld-in:focus { outline: 2px solid #0d948855; border-color: #0d9488; }
+</style>
+
+@code {
+    public enum InputKind { Text, Email, Password }
+
+    [Parameter] public string? Value { get; set; }                    // bindable
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public string? Label { get; set; }                    // primitive
+    [Parameter] public string? Placeholder { get; set; }              // primitive
+    [Parameter] public InputKind Kind { get; set; } = InputKind.Text; // enum
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString();
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

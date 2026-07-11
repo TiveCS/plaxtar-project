@@ -1,0 +1,22 @@
+@page "/"
+@using AcmePortal.Ui
+@inject AcmePortal.Services.ICustomerData Data
+
+<PageTitle>Overview · AcmePortal</PageTitle>
+
+<h1 style="font:600 22px system-ui;margin:0 0 16px;color:#0f172a">Overview</h1>
+
+<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+    <StatCard Title="Customers" Value="@_count.ToString("N0")" Delta="+3.2%" Trend="StatCard.TrendDir.Up" />
+    <StatCard Title="MRR" Value="$48.2k" Delta="+1.1%" Trend="StatCard.TrendDir.Up" />
+    <StatCard Title="Churn" Value="1.8%" Delta="-0.3%" Trend="StatCard.TrendDir.Down" />
+</div>
+
+<Panel Title="Getting started">
+    <Alert Message="This is a normal AcmePortal page — the app has no idea the Composer exists." Severity="Alert.Level.Info" />
+</Panel>
+
+@code {
+    private int _count;
+    protected override async Task OnInitializedAsync() => _count = await Data.CountAsync();
+}

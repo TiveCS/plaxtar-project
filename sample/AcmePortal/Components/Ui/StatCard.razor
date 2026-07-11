@@ -1,0 +1,28 @@
+@namespace AcmePortal.Ui
+
+<div class="stat">
+    <span class="stat-title">@Title</span>
+    <span class="stat-value">@Value</span>
+    <span class="stat-trend trend-@Trend.ToString().ToLowerInvariant()">@TrendGlyph @Delta</span>
+</div>
+
+<style>
+    .stat { display: flex; flex-direction: column; gap: 4px; padding: 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; min-width: 160px; font-family: system-ui, sans-serif; }
+    .stat-title { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+    .stat-value { font-size: 26px; font-weight: 700; color: #0f172a; }
+    .stat-trend { font-size: 12px; font-weight: 600; }
+    .trend-up { color: #16a34a; }
+    .trend-down { color: #dc2626; }
+    .trend-flat { color: #64748b; }
+</style>
+
+@code {
+    public enum TrendDir { Up, Down, Flat }
+
+    [Parameter] public string Title { get; set; } = "Metric";   // primitive
+    [Parameter] public string Value { get; set; } = "0";        // primitive
+    [Parameter] public string? Delta { get; set; }              // primitive
+    [Parameter] public TrendDir Trend { get; set; } = TrendDir.Flat; // enum
+
+    private string TrendGlyph => Trend switch { TrendDir.Up => "▲", TrendDir.Down => "▼", _ => "—" };
+}
