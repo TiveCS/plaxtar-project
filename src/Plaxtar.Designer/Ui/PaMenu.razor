@@ -37,12 +37,14 @@
     private string PosStyle =>
         $"left:{_x.ToString("0", CultureInfo.InvariantCulture)}px;top:{_y.ToString("0", CultureInfo.InvariantCulture)}px";
 
-    private Task OnContext(MouseEventArgs e) => _isContext ? OpenAt(e) : Task.CompletedTask;
-    private Task OnAnchorClick(MouseEventArgs e) => !_isContext ? OpenAt(e) : Task.CompletedTask;
+    private Task OnContext(MouseEventArgs e) => _isContext ? OpenAtAsync(e.ClientX, e.ClientY) : Task.CompletedTask;
+    private Task OnAnchorClick(MouseEventArgs e) => Trigger == "anchor" ? OpenAtAsync(e.ClientX, e.ClientY) : Task.CompletedTask;
 
-    private async Task OpenAt(MouseEventArgs e)
+    // Open the menu at viewport coords. Use with Trigger="none" to drive it from a
+    // parent (e.g. a canvas right-click handler authored in the page).
+    public async Task OpenAtAsync(double x, double y)
     {
-        _x = e.ClientX; _y = e.ClientY;
+        _x = x; _y = y;
         _open = true; _justOpened = true;
         await OnOpen.InvokeAsync();
         StateHasChanged();

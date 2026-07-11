@@ -100,6 +100,68 @@ public sealed class DesignSession
         Notify();
     }
 
+    // Deep-clone a node (fresh Ids). Params values are primitives / immutable
+    // BindExpr|RawExpr records, so a shallow value copy is safe.
+    public EditableNode CloneNode(EditableNode src) => new()
+    {
+        Component = src.Component, Element = src.Element, Text = src.Text, Src = src.Src,
+        CssClass = src.CssClass, Style = src.Style,
+        Layout = new(src.Layout), Attributes = new(src.Attributes),
+        Params = new(src.Params), Bindings = new(src.Bindings), Events = new(src.Events),
+        Children = src.Children.Select(CloneNode).ToList(),
+        Slots = src.Slots.ToDictionary(kv => kv.Key, kv => kv.Value.Select(CloneNode).ToList()),
+    };
+
+    // Context-menu insert (#22): into a named `slot` of the target, else its
+    // ChildContent if it's a container, else as the target's next sibling.
+    public void InsertInto(string targetId, string? slot, EditableNode node)
+    {
+        var target = FindAny(targetId);
+        if (target is null) { Root.Children.Add(node); }
+        else if (slot is { } s && target.Component is { } c && NamedSlots(c).Contains(s))
+        {
+            if (!target.Slots.TryGetValue(s, out var list)) target.Slots[s] = list = new();
+            list.Add(node);
+        }
+        else if (CanContainNode(target)) target.Children.Add(node);
+        else if (ListOf(target) is { } siblings) siblings.Insert(siblings.IndexOf(target) + 1, node);
+        else Root.Children.Add(node);
+
+        SelectedId = node.Id;
+        ActiveSlot = null;
+        Notify();
+    }
+
+    public void InsertComponentInto(string targetId, string? slot, string component) =>
+        InsertInto(targetId, slot, new EditableNode { Component = component, Src = Info(component)?.Src });
+    public void InsertElementInto(string targetId, string? slot, string tag) =>
+        InsertInto(targetId, slot, new EditableNode { Element = tag.Trim().TrimStart('<').TrimEnd('>') });
+    public void InsertTextInto(string targetId, string? slot, string text = "text") =>
+        InsertInto(targetId, slot, new EditableNode { Text = text });
+
+    // Clone a node as its own following sibling.
+    public void Duplicate(string id)
+    {
+        var node = FindAny(id);
+        if (node is null) return;
+        var copy = CloneNode(node);
+        if (ListOf(node) is { } list) list.Insert(list.IndexOf(node) + 1, copy);
+        else (ParentAny(node) ?? Root).Children.Add(copy);
+        SelectedId = copy.Id;
+        Notify();
+    }
+
+    // Copy an existing node into the State's overlays (non-destructive).
+    public void AddNodeAsOverlay(string id)
+    {
+        if (FindAny(id) is not { } node) return;
+        var copy = CloneNode(node);
+        Overlays.Add(copy);
+        SelectedId = copy.Id;
+        ActiveSlot = null;
+        Notify();
+    }
+
     public void SetClass(string id, string? value)
     {
         if (FindAny(id) is { } n) { n.CssClass = string.IsNullOrWhiteSpace(value) ? null : value; Notify(); }

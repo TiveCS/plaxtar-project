@@ -67,6 +67,7 @@
                             {
                                 <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
                                         style="padding-left:@(depth * 14 + 8)px"
+                                        @oncontextmenu:preventDefault="true" @oncontextmenu="e => OpenCtx(node.Id, e)"
                                         @onclick="() => Session.Select(node.Id)">
                                     <span class="lname">@node.DisplayName</span>
                                     @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
@@ -428,6 +429,64 @@
     </div>
 
     <PaDialog @ref="_dialog" />
+
+    @* Right-click context menu (#22), page-driven so it works on builder-rendered
+       canvas nodes and Layers rows alike. Insert is slot-aware for components. *@
+    <PaMenu @ref="_ctxMenu" Trigger="none">
+        <ChildContent>
+            @if (Session.Selected is { } t)
+            {
+                @if (!_ctxShowInsert)
+                {
+                    <PaMenuItem Icon="+" KeepOpen="true" OnClick="() => _ctxShowInsert = true">Insert…</PaMenuItem>
+                    <PaMenuItem Icon="&#9112;" OnClick="() => Session.Duplicate(t.Id)">Duplicate</PaMenuItem>
+                    <PaMenuItem Icon="&#10697;" OnClick="() => Session.AddNodeAsOverlay(t.Id)">Add as overlay</PaMenuItem>
+                    <PaMenuItem Icon="&#10005;" Danger="true" OnClick="() => CtxDelete(t)">Delete</PaMenuItem>
+                }
+                else
+                {
+                    var slots = t.IsComponent ? Session.NamedSlots(t.Component) : (IReadOnlyList<string>)Array.Empty<string>();
+                    var hasBody = t.IsComponent ? Session.CanContain(t.Component!) : (t.IsElement && !t.IsVoidElement);
+                    <div class="ctx-insert">
+                        @if (t.IsComponent && (hasBody || slots.Count > 0))
+                        {
+                            <div class="slotpick ctx-slots">
+                                @if (hasBody)
+                                {
+                                    <button class="slotbtn @(_ctxSlot is null ? "act" : "")" @onclick="() => _ctxSlot = null">Body</button>
+                                }
+                                @foreach (var sn in slots)
+                                {
+                                    <button class="slotbtn @(_ctxSlot == sn ? "act" : "")" @onclick="() => _ctxSlot = sn">@sn</button>
+                                }
+                            </div>
+                        }
+                        <PaSearchBar @bind-Value="_ctxQuery" Placeholder="Insert component / element…" />
+                        <div class="ctx-list">
+                            @foreach (var c in CtxComponents())
+                            {
+                                <button class="ctx-opt" @onclick="() => CtxInsertComponent(t.Id, c.Name)">
+                                    @c.Name @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
+                                </button>
+                            }
+                            @foreach (var tag in CtxElements())
+                            {
+                                <button class="ctx-opt mono" @onclick="() => CtxInsertElement(t.Id, tag)">&lt;@tag&gt;</button>
+                            }
+                            @if (CtxTextMatches())
+                            {
+                                <button class="ctx-opt" @onclick="() => CtxInsertText(t.Id)">&#8220;Text&#8221;</button>
+                            }
+                            @if (!CtxComponents().Any() && !CtxElements().Any() && !CtxTextMatches())
+                            {
+                                <div class="muted">No matches.</div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </ChildContent>
+    </PaMenu>
 </div>
 
 <style>
@@ -517,6 +576,15 @@
     .pd-empty { display: block; padding: 12px; font: 11px ui-monospace, monospace; color: #a0a4ad; border: 1px dashed #cfd4de; border-radius: 6px; text-align: center; }
     .pd-node > .pd-tag { position: absolute; top: -8px; left: 6px; font: 10px ui-monospace, monospace; background: #5b6cf0; color: #fff; padding: 1px 5px; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 2; }
     .pd-node:hover > .pd-tag, .pd-node.pd-sel > .pd-tag { opacity: 1; }
+
+    /* Context-menu Insert flyout (#22) */
+    .ctx-insert { width: 240px; display: flex; flex-direction: column; gap: 8px; padding: 4px; }
+    .ctx-slots { padding: 0; }
+    .ctx-list { max-height: 240px; overflow: auto; display: flex; flex-direction: column; }
+    .ctx-opt { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; font: inherit; font-size: 13px; border: 0; background: transparent; padding: 6px 8px; border-radius: 5px; cursor: pointer; color: #1f2937; }
+    .ctx-opt:hover { background: #f3f4f6; }
+    .ctx-opt.mono { font-family: ui-monospace, monospace; font-size: 12px; color: #565a66; }
+    .ctx-opt .cc { margin-left: auto; font-size: 9px; color: #5b6cf0; background: #eaecfd; padding: 1px 5px; border-radius: 4px; }
 </style>
 
 @code {
@@ -605,6 +673,52 @@
     }
 
     private void CancelBarTimer() { _barCts?.Cancel(); _barCts = null; }
+
+    // --- Right-click context menu (#22) ---
+    private PaMenu? _ctxMenu;
+    private string? _ctxNodeId;
+    private bool _ctxShowInsert;
+    private string _ctxQuery = "";
+    private string? _ctxSlot;      // named slot to insert into (null = Body/ChildContent)
+
+    private async Task OpenCtx(string nodeId, MouseEventArgs e)
+    {
+        _ctxNodeId = nodeId;
+        _ctxShowInsert = false; _ctxQuery = ""; _ctxSlot = null;
+        Session.Select(nodeId);    // the menu targets Session.Selected
+        if (_ctxMenu is not null) await _ctxMenu.OpenAtAsync(e.ClientX, e.ClientY);
+    }
+
+    private async Task CtxDelete(EditableNode t)
+    {
+        if (_dialog is null) return;
+        if (await _dialog.ConfirmAsync("Delete node?", $"Delete {t.DisplayName} and its contents?"))
+            Session.Remove(t.Id);
+    }
+
+    private IEnumerable<ComponentInfo> CtxComponents() =>
+        string.IsNullOrWhiteSpace(_ctxQuery) ? Catalog.Components
+        : Catalog.Components.Where(c => c.Name.Contains(_ctxQuery, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<string> CtxElements()
+    {
+        var all = HtmlTags.Palette.SelectMany(g => g.Tags);
+        return string.IsNullOrWhiteSpace(_ctxQuery) ? all
+            : all.Where(t => t.Contains(_ctxQuery, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool CtxTextMatches() =>
+        string.IsNullOrWhiteSpace(_ctxQuery) || "text".Contains(_ctxQuery, StringComparison.OrdinalIgnoreCase);
+
+    private async Task CtxInsertComponent(string targetId, string name) { Session.InsertComponentInto(targetId, _ctxSlot, name); await CloseCtx(); }
+    private async Task CtxInsertElement(string targetId, string tag) { Session.InsertElementInto(targetId, _ctxSlot, tag); await CloseCtx(); }
+    private async Task CtxInsertText(string targetId) { Session.InsertTextInto(targetId, _ctxSlot); await CloseCtx(); }
+
+    private async Task CloseCtx()
+    {
+        _ctxShowInsert = false;
+        if (_ctxMenu is not null) await _ctxMenu.CloseAsync();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -730,6 +844,11 @@
         builder.AddEventPreventDefaultAttribute(7, "ondragover", true);
         builder.AddAttribute(8, "ondrop", EventCallback.Factory.Create<DragEventArgs>(this, () => DropOn(node.Id)));
         builder.AddEventStopPropagationAttribute(9, "ondrop", true);
+        // Right-click context menu (#22). stopPropagation so only the deepest node
+        // under the cursor opens the menu; preventDefault suppresses the native menu.
+        builder.AddAttribute(10, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, e => OpenCtx(node.Id, e)));
+        builder.AddEventPreventDefaultAttribute(19, "oncontextmenu", true);
+        builder.AddEventStopPropagationAttribute(29, "oncontextmenu", true);
 
         builder.OpenElement(11, "span");
         builder.AddAttribute(12, "class", "pd-tag");
