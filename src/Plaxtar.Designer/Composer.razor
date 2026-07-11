@@ -16,10 +16,14 @@
         <span class="scr">@Session.Screen<span class="st">.@Session.State</span></span>
         <span class="spacer"></span>
         @if (_saved is not null) { <span class="okmsg">saved → @_saved</span> }
+        <button class="btn2 @(_preview ? "on" : "")" @onclick="() => _preview = !_preview"
+                title="Preview = raw, full-width, true-fidelity render (non-interactive)">
+            @(_preview ? "✎ Edit" : "◱ Preview")
+        </button>
         <button class="btn" @onclick="SaveAsync">Save</button>
     </div>
 
-    <div class="split">
+    <div class="split @(_preview ? "preview" : "")">
         <!-- screens + palette + layers -->
         <div class="pane palette">
             <div class="ph">Screens</div>
@@ -105,14 +109,14 @@
         <!-- canvas -->
         <div class="pane canvas" @onclick="() => Session.Select(null)">
             <LayoutView Layout="_shellType">
-                @RenderNode(Session.Root)
+                @(_preview ? RenderRaw(Session.Root) : RenderNode(Session.Root))
             </LayoutView>
             @if (Session.Overlays.Count > 0)
             {
                 <div class="ov-layer">
                     @foreach (var ov in Session.Overlays)
                     {
-                        <div class="ov-item">@RenderNode(ov)</div>
+                        <div class="ov-item">@(_preview ? RenderRaw(ov) : RenderNode(ov))</div>
                     }
                 </div>
             }
@@ -273,7 +277,11 @@
     .spacer { flex: 1; }
     .okmsg { font-size: 12px; color: #16884a; }
     .btn { font: inherit; font-size: 13px; font-weight: 550; padding: 6px 14px; border-radius: 7px; border: 1px solid #5b6cf0; background: #5b6cf0; color: #fff; cursor: pointer; }
+    .btn2 { font: inherit; font-size: 13px; font-weight: 550; padding: 6px 12px; border-radius: 7px; border: 1px solid #d5d9e2; background: #fff; color: #565a66; cursor: pointer; }
+    .btn2.on { border-color: #5b6cf0; background: #eaecfd; color: #4550c8; }
     .split { display: grid; grid-template-columns: 180px 1fr 240px; height: calc(100vh - 46px); }
+    .split.preview { grid-template-columns: 0 1fr 0; }
+    .split.preview .palette, .split.preview .props { display: none; }
     .pane { overflow: auto; }
     .palette { border-right: 1px solid #e2e5ec; background: #fafbfc; padding: 6px; }
     .props { border-left: 1px solid #e2e5ec; background: #fff; padding: 6px 10px; }
@@ -329,6 +337,7 @@
 
 @code {
     private Type? _shellType;
+    private bool _preview;      // true = raw, full-width, true-fidelity render (ADR 0005)
     private string? _saved;
 
     private string _designsDir = "";
@@ -468,7 +477,30 @@
         builder.CloseElement();
     };
 
-    private Dictionary<string, object?> BuildParams(EditableNode node, Type type)
+    // Raw render (Preview mode, ADR 0005): the exact DOM codegen would emit — no
+    // pd-node wrapper, no tag, no empty-slot placeholder, no selection onclick — so
+    // flex/grid item identity and width resolution match the generated .razor.
+    private RenderFragment RenderRaw(EditableNode node) => builder =>
+    {
+        if (node.IsElement)
+        {
+            builder.OpenElement(0, node.Element!);
+            if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(1, "class", node.CssClass);
+            if (!string.IsNullOrWhiteSpace(node.Style)) builder.AddAttribute(2, "style", node.Style);
+            foreach (var child in node.Children) builder.AddContent(3, RenderRaw(child));
+            builder.CloseElement();
+        }
+        else
+        {
+            var type = Resolver.Resolve(node.Component!);
+            builder.OpenComponent<DynamicComponent>(4);
+            builder.AddComponentParameter(5, "Type", type);
+            builder.AddComponentParameter(6, "Parameters", BuildParams(node, type, preview: true));
+            builder.CloseComponent();
+        }
+    };
+
+    private Dictionary<string, object?> BuildParams(EditableNode node, Type type, bool preview = false)
     {
         var p = new Dictionary<string, object?>();
 
@@ -491,14 +523,24 @@
         }
 
         if (type.GetProperty("ChildContent") is not null)
-            p["ChildContent"] = node.Children.Count > 0 ? Frag(node.Children) : EmptyFrag($"empty {node.Component} — add into it");
+        {
+            if (node.Children.Count > 0)
+                p["ChildContent"] = preview ? RawFrag(node.Children) : Frag(node.Children);
+            else if (!preview)
+                p["ChildContent"] = EmptyFrag($"empty {node.Component} — add into it");
+        }
 
         foreach (var (slot, kids) in node.Slots)
             if (kids.Count > 0 && type.GetProperty(slot) is not null)
-                p[slot] = Frag(kids);
+                p[slot] = preview ? RawFrag(kids) : Frag(kids);
 
         return p;
     }
+
+    private RenderFragment RawFrag(List<EditableNode> kids) => b =>
+    {
+        foreach (var child in kids) b.AddContent(0, RenderRaw(child));
+    };
 
     private readonly Dictionary<string, object?> _ephemeral = new();
 
