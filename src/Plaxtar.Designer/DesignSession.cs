@@ -35,7 +35,64 @@ public sealed class DesignSession
     private IEnumerable<EditableNode> Roots => Overlays.Prepend(Root);
 
     public event Action? Changed;
-    private void Notify() => Changed?.Invoke();
+
+    // --- Undo/redo (#27). Snapshot-based: every structural Notify checkpoints the tree;
+    // selection/panel changes call Notify(false) and are not undoable. History clears on
+    // load/new/state-switch and is depth-capped. ---
+    private const int MaxHistory = 100;
+    private readonly List<Snap> _undo = new();
+    private readonly List<Snap> _redo = new();
+    private Snap? _lastSnapshot;
+    private sealed record Snap(EditableNode Root, List<EditableNode> Overlays);
+
+    public bool CanUndo => _undo.Count > 0;
+    public bool CanRedo => _redo.Count > 0;
+
+    private Snap Snapshot() => new(CloneNode(Root), Overlays.Select(CloneNode).ToList());
+
+    private void Notify(bool structural = true)
+    {
+        if (structural)
+        {
+            if (_lastSnapshot is not null)
+            {
+                _undo.Add(_lastSnapshot);
+                if (_undo.Count > MaxHistory) _undo.RemoveAt(0);
+                _redo.Clear();
+            }
+            _lastSnapshot = Snapshot();
+        }
+        Changed?.Invoke();
+    }
+
+    private void ResetHistory() { _undo.Clear(); _redo.Clear(); _lastSnapshot = Snapshot(); }
+
+    public void Undo()
+    {
+        if (_undo.Count == 0) return;
+        _redo.Add(Snapshot());
+        var prev = _undo[^1]; _undo.RemoveAt(_undo.Count - 1);
+        ApplySnapshot(prev);
+        _lastSnapshot = Snapshot();
+        Changed?.Invoke();
+    }
+
+    public void Redo()
+    {
+        if (_redo.Count == 0) return;
+        _undo.Add(Snapshot());
+        var next = _redo[^1]; _redo.RemoveAt(_redo.Count - 1);
+        ApplySnapshot(next);
+        _lastSnapshot = Snapshot();
+        Changed?.Invoke();
+    }
+
+    private void ApplySnapshot(Snap s)
+    {
+        Root = CloneNode(s.Root);
+        Overlays = s.Overlays.Select(CloneNode).ToList();
+        if (SelectedId is not null && FindAny(SelectedId) is null) { SelectedId = null; ActiveSlot = null; }
+    }
 
     // The slot new nodes get inserted into for the selected container:
     // null = default ChildContent; otherwise a named RenderFragment.
@@ -51,10 +108,10 @@ public sealed class DesignSession
 
     public EditableNode? Selected => SelectedId is null ? null : FindAny(SelectedId);
 
-    public void SetState(string state) { if (!string.IsNullOrWhiteSpace(state)) { State = state.Trim(); Notify(); } }
+    public void SetState(string state) { if (!string.IsNullOrWhiteSpace(state)) { State = state.Trim(); Notify(false); } }
 
-    public void Select(string? id) { SelectedId = id; ActiveSlot = null; Notify(); }
-    public void SelectSlot(string? slot) { ActiveSlot = slot; Notify(); }
+    public void Select(string? id) { SelectedId = id; ActiveSlot = null; Notify(false); }
+    public void SelectSlot(string? slot) { ActiveSlot = slot; Notify(false); }
 
     public void New(string screen, string? shell)
     {
@@ -64,7 +121,8 @@ public sealed class DesignSession
         Root = new EditableNode { Element = "div" };   // neutral root, not tied to a Stack component
         Overlays = new();
         SelectedId = null;
-        Notify();
+        ResetHistory();
+        Notify(false);
     }
 
     public void Add(string component) => Place(new EditableNode { Component = component, Src = Info(component)?.Src });
@@ -411,7 +469,8 @@ public sealed class DesignSession
         Root = ToEditable(doc.Root);
         Overlays = doc.Overlays?.Select(ToEditable).ToList() ?? new();
         SelectedId = null;
-        Notify();
+        ResetHistory();
+        Notify(false);
     }
 
     public async Task<string> SaveAsync(string designsDir)
@@ -451,7 +510,8 @@ public sealed class DesignSession
         }
         State = name;
         SelectedId = null;
-        Notify();
+        ResetHistory();
+        Notify(false);
     }
 
     // Deep-copy a node (new Ids) so a cloned State edits independently of its source.

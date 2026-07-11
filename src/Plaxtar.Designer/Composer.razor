@@ -46,6 +46,9 @@
                 <PaTooltip Text="Elements" Side="bottom"><PaIconButton Title="Elements" Active="@(_panel == Panel.Elements)" OnClick="() => TogglePanel(Panel.Elements)">&#9671;</PaIconButton></PaTooltip>
                 <span class="topicons-sep"></span>
                 <PaTooltip Text="Properties" Side="bottom"><PaIconButton Title="Properties" Active="_propsOpen" OnClick="() => _propsOpen = !_propsOpen">&#9636;</PaIconButton></PaTooltip>
+                <span class="topicons-sep"></span>
+                <PaTooltip Text="Undo (Ctrl+Z)" Side="bottom"><PaIconButton Title="Undo" Disabled="!Session.CanUndo" OnClick="() => Session.Undo()">&#8630;</PaIconButton></PaTooltip>
+                <PaTooltip Text="Redo (Ctrl+Y)" Side="bottom"><PaIconButton Title="Redo" Disabled="!Session.CanRedo" OnClick="() => Session.Redo()">&#8631;</PaIconButton></PaTooltip>
             </span>
         }
         <span class="spacer"></span>
@@ -861,6 +864,9 @@
         var selected = Session.SelectedId == node.Id;
 
         builder.OpenElement(0, "div");
+        // Key by node Id so undo/redo (which mints new Ids) tears down and rebuilds the
+        // subtree — otherwise a reused DynamicComponent keeps a param that was unset.
+        builder.SetKey(node.Id);
         builder.AddAttribute(1, "class", "pd-node" + (selected ? " pd-sel" : ""));
         builder.AddAttribute(2, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => Session.Select(node.Id)));
         builder.AddEventStopPropagationAttribute(3, "onclick", true);
@@ -952,6 +958,7 @@
         {
             var type = Resolver.Resolve(node.Component!);
             builder.OpenComponent<DynamicComponent>(60);
+            builder.SetKey(node.Id);
             builder.AddComponentParameter(61, "Type", type);
             builder.AddComponentParameter(62, "Parameters", BuildParams(node, type, preview: true));
             builder.CloseComponent();
