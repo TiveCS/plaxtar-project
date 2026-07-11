@@ -56,7 +56,7 @@ Value encodings: `{ "$enum": "Type.Member" }` · `{ "$bind": "field" }` · `{ "$
    - `params` -> attributes. Enums -> `Param="Type.Member"`. Strings/bools/numbers -> literals.
    - `bindings` -> `@bind-<Name>="field"`. `events` -> `<Name>="Handler"`.
    - `children` -> nested markup inside the tag. `slots.<Name>` -> `<Name> … </Name>`.
-   - `layout` -> classes or inline `style` (prefer the project's spacing utilities if any exist).
+   - `layout` (element nodes) -> inline `style`, one declaration per key using this map: `display`→`display`, `direction`→`flex-direction`, `wrap`→`flex-wrap`, `justify`→`justify-content`, `align`→`align-items`, `gap`→`gap`, `columns`→`grid-template-columns`, `rows`→`grid-template-rows`, `width`/`minWidth`/`maxWidth`→`width`/`min-width`/`max-width`, `padding`→`padding`, `margin`→`margin`, `position`→`position`, `top`/`right`/`bottom`/`left`→same. A raw `style` string (if present) is appended and wins on conflict. Values are literal CSS tokens (e.g. `"12px"`, `"repeat(2,1fr)"`, `"sticky"`). Prefer the project's spacing utility classes over inline style if any exist.
 4. `overlays` -> render conditionally on the relevant state flag.
 5. Emit `@code` stubs: a field per `bindings` value; a method per `events` value, each marked `// TODO: implement`.
 

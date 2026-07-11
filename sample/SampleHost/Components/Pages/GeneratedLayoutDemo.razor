@@ -1,0 +1,16 @@
+@page "/generated-layout-demo"
+@layout SampleLayout
+@using SampleHost.SampleUi
+
+@* Codegen output from designs/layout-demo.default.json. Element `layout` objects
+   map to inline style per the CLAUDE.md contract (flex / grid / sticky). *@
+
+<div style="display:flex;flex-direction:column;gap:16px;padding:24px;max-width:480px;margin:0 auto">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+        <Badge Text="One" Variant="Badge.BadgeVariant.Ok" />
+        <Badge Text="Two" Variant="Badge.BadgeVariant.Warn" />
+    </div>
+    <div style="position:sticky;top:0;padding:8px">
+        <Button Text="Sticky action" />
+    </div>
+</div>

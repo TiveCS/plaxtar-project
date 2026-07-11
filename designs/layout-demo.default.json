@@ -1,0 +1,28 @@
+{
+  "schema": "plaxtar.designer/v1",
+  "screen": "layout-demo",
+  "state": "default",
+  "fe": "SampleHost",
+  "shell": "SampleLayout",
+  "root": {
+    "element": "div",
+    "layout": { "display": "flex", "direction": "column", "gap": "16px", "padding": "24px", "maxWidth": "480px", "margin": "0 auto" },
+    "children": [
+      {
+        "element": "div",
+        "layout": { "display": "grid", "columns": "repeat(2,1fr)", "gap": "12px" },
+        "children": [
+          { "component": "Badge", "src": "Components/SampleUi/Badge.razor", "params": { "Text": "One", "Variant": { "$enum": "BadgeVariant.Ok" } } },
+          { "component": "Badge", "src": "Components/SampleUi/Badge.razor", "params": { "Text": "Two", "Variant": { "$enum": "BadgeVariant.Warn" } } }
+        ]
+      },
+      {
+        "element": "div",
+        "layout": { "position": "sticky", "top": "0", "padding": "8px" },
+        "children": [
+          { "component": "Button", "src": "Components/SampleUi/Button.razor", "params": { "Text": "Sticky action" } }
+        ]
+      }
+    ]
+  }
+}

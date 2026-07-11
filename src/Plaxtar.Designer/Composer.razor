@@ -138,22 +138,116 @@
 
                 @if (sel.IsElement)
                 {
+                    var disp = LV(sel, "display");
+                    var pos = LV(sel, "position");
                     <div class="ph slots-h">Layout</div>
                     <div class="slotpick">
-                        <button class="slotbtn" @onclick="() => Session.SetStyle(sel.Id, null)">none</button>
-                        <button class="slotbtn" @onclick='() => Session.SetStyle(sel.Id, "display:flex;flex-direction:row;gap:12px")'>flex row</button>
-                        <button class="slotbtn" @onclick='() => Session.SetStyle(sel.Id, "display:flex;flex-direction:column;gap:12px")'>flex col</button>
-                        <button class="slotbtn" @onclick='() => Session.SetStyle(sel.Id, "display:grid;grid-template-columns:repeat(2,1fr);gap:12px")'>grid 2</button>
-                        <button class="slotbtn" @onclick='() => Session.SetStyle(sel.Id, "display:grid;grid-template-columns:repeat(3,1fr);gap:12px")'>grid 3</button>
+                        <button class="slotbtn" @onclick="() => ClearLayout(sel.Id)">clear</button>
+                        <button class="slotbtn" @onclick='() => Preset(sel.Id, ("display","flex"),("direction","row"),("gap","12px"))'>flex row</button>
+                        <button class="slotbtn" @onclick='() => Preset(sel.Id, ("display","flex"),("direction","column"),("gap","12px"))'>flex col</button>
+                        <button class="slotbtn" @onclick='() => Preset(sel.Id, ("display","grid"),("columns","repeat(2,1fr)"),("gap","12px"))'>grid 2</button>
+                        <button class="slotbtn" @onclick='() => Preset(sel.Id, ("display","grid"),("columns","repeat(3,1fr)"),("gap","12px"))'>grid 3</button>
                     </div>
+
+                    <div class="prow">
+                        <label>display</label>
+                        <select @onchange='e => Session.SetLayout(sel.Id, "display", e.Value?.ToString())'>
+                            @LayoutOptions(disp, "block", "flex", "inline-flex", "grid", "none")
+                        </select>
+                    </div>
+
+                    @if (disp is "flex" or "inline-flex")
+                    {
+                        <div class="prow">
+                            <label>direction</label>
+                            <select @onchange='e => Session.SetLayout(sel.Id, "direction", e.Value?.ToString())'>
+                                @LayoutOptions(LV(sel, "direction"), "row", "column")
+                            </select>
+                        </div>
+                        <div class="prow">
+                            <label>wrap</label>
+                            <select @onchange='e => Session.SetLayout(sel.Id, "wrap", e.Value?.ToString())'>
+                                @LayoutOptions(LV(sel, "wrap"), "nowrap", "wrap")
+                            </select>
+                        </div>
+                        <div class="prow">
+                            <label>justify</label>
+                            <select @onchange='e => Session.SetLayout(sel.Id, "justify", e.Value?.ToString())'>
+                                @LayoutOptions(LV(sel, "justify"), "start", "center", "end", "space-between", "space-around")
+                            </select>
+                        </div>
+                        <div class="prow">
+                            <label>align</label>
+                            <select @onchange='e => Session.SetLayout(sel.Id, "align", e.Value?.ToString())'>
+                                @LayoutOptions(LV(sel, "align"), "stretch", "start", "center", "end")
+                            </select>
+                        </div>
+                    }
+                    @if (disp == "grid")
+                    {
+                        <div class="prow">
+                            <label>columns</label>
+                            <input type="text" value="@LV(sel, "columns")" placeholder="repeat(2,1fr)"
+                                   @onchange='e => Session.SetLayout(sel.Id, "columns", e.Value?.ToString())' />
+                        </div>
+                        <div class="prow">
+                            <label>rows</label>
+                            <input type="text" value="@LV(sel, "rows")" placeholder="auto"
+                                   @onchange='e => Session.SetLayout(sel.Id, "rows", e.Value?.ToString())' />
+                        </div>
+                    }
+                    @if (disp is "flex" or "inline-flex" or "grid")
+                    {
+                        <div class="prow">
+                            <label>gap</label>
+                            <input type="text" value="@LV(sel, "gap")" placeholder="12px"
+                                   @onchange='e => Session.SetLayout(sel.Id, "gap", e.Value?.ToString())' />
+                        </div>
+                    }
+
+                    <div class="ph slots-h">Size &amp; spacing</div>
+                    <div class="lgrid">
+                        <div><label>width</label><input type="text" value="@LV(sel, "width")" placeholder="auto / 100% / 320px"
+                                @onchange='e => Session.SetLayout(sel.Id, "width", e.Value?.ToString())' /></div>
+                        <div><label>min</label><input type="text" value="@LV(sel, "minWidth")" placeholder="min-width"
+                                @onchange='e => Session.SetLayout(sel.Id, "minWidth", e.Value?.ToString())' /></div>
+                        <div><label>max</label><input type="text" value="@LV(sel, "maxWidth")" placeholder="max-width"
+                                @onchange='e => Session.SetLayout(sel.Id, "maxWidth", e.Value?.ToString())' /></div>
+                        <div><label>padding</label><input type="text" value="@LV(sel, "padding")" placeholder="16px"
+                                @onchange='e => Session.SetLayout(sel.Id, "padding", e.Value?.ToString())' /></div>
+                        <div><label>margin</label><input type="text" value="@LV(sel, "margin")" placeholder="0 auto"
+                                @onchange='e => Session.SetLayout(sel.Id, "margin", e.Value?.ToString())' /></div>
+                    </div>
+
+                    <div class="ph slots-h">Position</div>
+                    <div class="prow">
+                        <select @onchange='e => Session.SetLayout(sel.Id, "position", e.Value?.ToString())'>
+                            @LayoutOptions(pos, "static", "relative", "sticky", "fixed", "absolute")
+                        </select>
+                    </div>
+                    @if (pos is not ("" or "static"))
+                    {
+                        <div class="lgrid">
+                            <div><label>top</label><input type="text" value="@LV(sel, "top")"
+                                    @onchange='e => Session.SetLayout(sel.Id, "top", e.Value?.ToString())' /></div>
+                            <div><label>right</label><input type="text" value="@LV(sel, "right")"
+                                    @onchange='e => Session.SetLayout(sel.Id, "right", e.Value?.ToString())' /></div>
+                            <div><label>bottom</label><input type="text" value="@LV(sel, "bottom")"
+                                    @onchange='e => Session.SetLayout(sel.Id, "bottom", e.Value?.ToString())' /></div>
+                            <div><label>left</label><input type="text" value="@LV(sel, "left")"
+                                    @onchange='e => Session.SetLayout(sel.Id, "left", e.Value?.ToString())' /></div>
+                        </div>
+                    }
+
+                    <div class="ph slots-h">Escape hatches</div>
                     <div class="prow">
                         <label>class</label>
                         <input type="text" value="@sel.CssClass" placeholder="e.g. grid grid-cols-2 gap-4"
                                @onchange="e => Session.SetClass(sel.Id, e.Value?.ToString())" />
                     </div>
                     <div class="prow">
-                        <label>style</label>
-                        <input type="text" value="@sel.Style" placeholder="e.g. padding:16px"
+                        <label>style (raw, wins)</label>
+                        <input type="text" value="@sel.Style" placeholder="e.g. box-shadow:0 1px 2px #0002"
                                @onchange="e => Session.SetStyle(sel.Id, e.Value?.ToString())" />
                     </div>
                 }
@@ -324,6 +418,9 @@
     .prow .ptype { color: #b0b4bd; font-family: ui-monospace, monospace; }
     .prow input[type=text], .prow input[type=number], .prow select { width: 100%; font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid #e2e5ec; border-radius: 6px; }
     .prow .bindbox, .prow .rawbox { margin-top: 4px; font-family: ui-monospace, monospace; font-size: 12px; border-style: dashed; border-color: #c3b6ef; background: #faf9ff; }
+    .lgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 4px; }
+    .lgrid label { display: block; font-size: 11px; color: #565a66; margin-bottom: 3px; }
+    .lgrid input { width: 100%; font: inherit; font-size: 12.5px; font-family: ui-monospace, monospace; padding: 4px 6px; border: 1px solid #e2e5ec; border-radius: 6px; }
     .muted { color: #8a8f9c; font-size: 12.5px; padding: 4px; }
 
     /* selection wrapper (edit mode only; not exported) */
@@ -451,7 +548,7 @@
         {
             builder.OpenElement(7, node.Element!);
             if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(8, "class", node.CssClass);
-            if (!string.IsNullOrWhiteSpace(node.Style)) builder.AddAttribute(9, "style", node.Style);
+            if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(9, "style", css);
             if (node.Children.Count == 0)
             {
                 builder.OpenElement(10, "span");
@@ -486,7 +583,7 @@
         {
             builder.OpenElement(0, node.Element!);
             if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(1, "class", node.CssClass);
-            if (!string.IsNullOrWhiteSpace(node.Style)) builder.AddAttribute(2, "style", node.Style);
+            if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(2, "style", css);
             foreach (var child in node.Children) builder.AddContent(3, RenderRaw(child));
             builder.CloseElement();
         }
@@ -573,6 +670,34 @@
         Session.Info(component)?.Params
             .Where(p => p.Kind is ParamKind.Primitive or ParamKind.Enum)
             .ToList() ?? new();
+
+    private static string LV(EditableNode n, string key) => n.Layout.GetValueOrDefault(key) ?? "";
+
+    // <option> list for a layout select: a "(unset)" entry plus each choice, current selected.
+    private RenderFragment LayoutOptions(string current, params string[] opts) => b =>
+    {
+        b.OpenElement(0, "option");
+        b.AddAttribute(1, "value", "");
+        if (string.IsNullOrEmpty(current)) b.AddAttribute(2, "selected", true);
+        b.AddContent(3, "(unset)");
+        b.CloseElement();
+        foreach (var o in opts)
+        {
+            b.OpenElement(4, "option");
+            b.AddAttribute(5, "value", o);
+            if (current == o) b.AddAttribute(6, "selected", true);
+            b.AddContent(7, o);
+            b.CloseElement();
+        }
+    };
+
+    private void ClearLayout(string id) => Session.ClearLayout(id);
+
+    private void Preset(string id, params (string key, string val)[] kv)
+    {
+        Session.ClearLayout(id);
+        foreach (var (k, v) in kv) Session.SetLayout(id, k, v);
+    }
 
     private List<ParamInfo> EventParams(string component) =>
         Session.Info(component)?.Params.Where(p => p.Kind == ParamKind.Event).ToList() ?? new();

@@ -11,7 +11,8 @@ public sealed class EditableNode
     public string? Element { get; set; }     // raw HTML element node (e.g. "div")
     public string? Src { get; set; }
     public string? CssClass { get; set; }    // element: class attribute
-    public string? Style { get; set; }       // element: inline style
+    public string? Style { get; set; }       // element: inline style (raw escape hatch)
+    public Dictionary<string, string> Layout { get; set; } = new(); // structured CSS flow props -> node.layout
     public Dictionary<string, object?> Params { get; set; } = new();
     public Dictionary<string, string> Bindings { get; set; } = new();       // @bind-<Param> -> field name
     public Dictionary<string, string> Events { get; set; } = new();         // EventCallback <Name> -> handler name

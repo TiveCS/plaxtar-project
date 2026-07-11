@@ -1,0 +1,11 @@
+@namespace SampleHost.SampleUi
+
+<div style="display:grid;grid-template-columns:repeat(@(Columns),1fr);gap:@(Gap)px">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public int Columns { get; set; } = 2;   // primitive
+    [Parameter] public int Gap { get; set; } = 8;       // primitive
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

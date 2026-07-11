@@ -109,6 +109,21 @@ public sealed class DesignSession
         if (FindAny(id) is { } n) { n.Style = string.IsNullOrWhiteSpace(value) ? null : value; Notify(); }
     }
 
+    // Structured layout prop (SPEC §5): set a `layout` key (display, gap, position…);
+    // empty value removes it. Values are literal CSS tokens ("column", "12px", "sticky").
+    public void SetLayout(string id, string key, string? value)
+    {
+        if (FindAny(id) is not { } n) return;
+        if (string.IsNullOrWhiteSpace(value)) n.Layout.Remove(key);
+        else n.Layout[key] = value.Trim();
+        Notify();
+    }
+
+    public void ClearLayout(string id)
+    {
+        if (FindAny(id) is { } n) { n.Layout.Clear(); Notify(); }
+    }
+
     public void Remove(string id)
     {
         var node = FindAny(id);
@@ -271,6 +286,7 @@ public sealed class DesignSession
                 Element = dto.Element,
                 CssClass = dto.CssClass,
                 Style = dto.Style,
+                Layout = dto.Layout is null ? new() : new(dto.Layout),
                 Children = dto.Children.Select(ToEditable).ToList(),
             };
         }
@@ -303,6 +319,7 @@ public sealed class DesignSession
             dict["element"] = n.Element;
             if (n.CssClass is not null) dict["class"] = n.CssClass;
             if (n.Style is not null) dict["style"] = n.Style;
+            if (n.Layout.Count > 0) dict["layout"] = new Dictionary<string, string>(n.Layout);
             if (n.Children.Count > 0) dict["children"] = n.Children.Select(ToDto).ToList();
             return dict;
         }

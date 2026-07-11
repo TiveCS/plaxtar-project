@@ -76,6 +76,31 @@
       "Params": []
     },
     {
+      "Name": "Grid",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/Grid.razor",
+      "Params": [
+        {
+          "Name": "Columns",
+          "Type": "int",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Gap",
+          "Type": "int",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "ChildContent",
+          "Type": "RenderFragment",
+          "Kind": "ChildContent",
+          "Bindable": false
+        }
+      ]
+    },
+    {
       "Name": "Modal",
       "Assembly": "SampleHost",
       "Src": "Components/SampleUi/Modal.razor",

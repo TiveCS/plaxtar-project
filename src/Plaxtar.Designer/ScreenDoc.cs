@@ -24,6 +24,7 @@ public sealed class NodeDto
     [JsonPropertyName("src")] public string? Src { get; set; }
     [JsonPropertyName("class")] public string? CssClass { get; set; }
     [JsonPropertyName("style")] public string? Style { get; set; }
+    [JsonPropertyName("layout")] public Dictionary<string, string>? Layout { get; set; }
     [JsonPropertyName("params")] public Dictionary<string, JsonElement> Params { get; set; } = new();
     [JsonPropertyName("bindings")] public Dictionary<string, string>? Bindings { get; set; }
     [JsonPropertyName("events")] public Dictionary<string, string>? Events { get; set; }
