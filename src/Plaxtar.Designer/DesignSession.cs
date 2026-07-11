@@ -43,7 +43,7 @@ public sealed class DesignSession
         component is null ? Array.Empty<string>()
         : Info(component)?.Params.Where(p => p.Kind == ParamKind.Slot).Select(p => p.Name).ToList() ?? new();
     public bool CanContainNode(EditableNode n) =>
-        n.IsElement || (n.Component is { } c && (CanContain(c) || NamedSlots(c).Count > 0));
+        (n.IsElement && !n.IsVoidElement) || (n.Component is { } c && (CanContain(c) || NamedSlots(c).Count > 0));
 
     public EditableNode? Selected => SelectedId is null ? null : FindAny(SelectedId);
 
@@ -64,7 +64,8 @@ public sealed class DesignSession
     }
 
     public void Add(string component) => Place(new EditableNode { Component = component, Src = Info(component)?.Src });
-    public void AddElement(string tag) => Place(new EditableNode { Element = tag });
+    public void AddElement(string tag) => Place(new EditableNode { Element = tag.Trim().TrimStart('<').TrimEnd('>') });
+    public void AddText(string text = "text") => Place(new EditableNode { Text = text });
 
     // Add a top-level overlay (e.g. a Modal) for the current State.
     public void AddOverlay(string component)
@@ -107,6 +108,30 @@ public sealed class DesignSession
     public void SetStyle(string id, string? value)
     {
         if (FindAny(id) is { } n) { n.Style = string.IsNullOrWhiteSpace(value) ? null : value; Notify(); }
+    }
+
+    public void SetText(string id, string? value)
+    {
+        if (FindAny(id) is { IsText: true } n) { n.Text = value ?? ""; Notify(); }
+    }
+
+    // Passthrough attribute on an element (data-*/aria-*/id...). A null value removes
+    // it; an empty string keeps it valueless (e.g. `required`, `disabled`).
+    public void SetAttribute(string id, string key, string? value)
+    {
+        if (FindAny(id) is not { } n || string.IsNullOrWhiteSpace(key)) return;
+        if (value is null) n.Attributes.Remove(key);
+        else n.Attributes[key.Trim()] = value;
+        Notify();
+    }
+
+    // Rename an attribute key (preserving value); drops the old key.
+    public void RenameAttribute(string id, string oldKey, string newKey)
+    {
+        if (FindAny(id) is not { } n || !n.Attributes.TryGetValue(oldKey, out var v)) return;
+        n.Attributes.Remove(oldKey);
+        if (!string.IsNullOrWhiteSpace(newKey)) n.Attributes[newKey.Trim()] = v;
+        Notify();
     }
 
     // Structured layout prop (SPEC §5): set a `layout` key (display, gap, position…);
@@ -321,9 +346,12 @@ public sealed class DesignSession
     {
         Component = n.Component,
         Element = n.Element,
+        Text = n.Text,
         Src = n.Src,
         CssClass = n.CssClass,
         Style = n.Style,
+        Layout = new(n.Layout),
+        Attributes = new(n.Attributes),
         Params = new(n.Params),
         Bindings = new(n.Bindings),
         Events = new(n.Events),
@@ -333,6 +361,9 @@ public sealed class DesignSession
 
     private EditableNode ToEditable(NodeDto dto)
     {
+        if (dto.Text is not null)
+            return new EditableNode { Text = dto.Text };
+
         if (dto.Element is not null)
         {
             return new EditableNode
@@ -341,6 +372,7 @@ public sealed class DesignSession
                 CssClass = dto.CssClass,
                 Style = dto.Style,
                 Layout = dto.Layout is null ? new() : new(dto.Layout),
+                Attributes = dto.Attributes is null ? new() : new(dto.Attributes),
                 Children = dto.Children.Select(ToEditable).ToList(),
             };
         }
@@ -368,12 +400,19 @@ public sealed class DesignSession
     {
         var dict = new Dictionary<string, object?>();
 
+        if (n.IsText)
+        {
+            dict["text"] = n.Text;
+            return dict;
+        }
+
         if (n.IsElement)
         {
             dict["element"] = n.Element;
             if (n.CssClass is not null) dict["class"] = n.CssClass;
             if (n.Style is not null) dict["style"] = n.Style;
             if (n.Layout.Count > 0) dict["layout"] = new Dictionary<string, string>(n.Layout);
+            if (n.Attributes.Count > 0) dict["attributes"] = new Dictionary<string, string>(n.Attributes);
             if (n.Children.Count > 0) dict["children"] = n.Children.Select(ToDto).ToList();
             return dict;
         }

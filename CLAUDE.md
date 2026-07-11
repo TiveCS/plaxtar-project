@@ -25,11 +25,15 @@ When asked to "build `designs/<screen>.<state>.json`", read that file **and** `d
 }
 ```
 
-A `Node` is **either** a component (`component`) **or** a raw HTML element (`element`, with optional `class`/`style`). Element nodes codegen to `<tag class="…" style="…">children</tag>` and are how plain styled containers (Tailwind/Bootstrap/custom `<div>`s) are represented.
+A `Node` is one of three kinds: a **component** (`component`), a raw HTML **element** (`element`, with optional `class`/`style`/`layout`/`attributes`), or a **text** node (`text`, literal content). Element nodes codegen to `<tag class="…" style="…" data-…="…">children</tag>`; text nodes emit their content verbatim (HTML-encoded). Mixed content is an element with a text child plus element children.
 
 ```jsonc
-// element node
-{ "element": "div", "class": "grid grid-cols-2 gap-4", "children": [<Node>] }
+// element node (attributes = passthrough data-*/aria-*/id/href…, element-only)
+{ "element": "nav", "class": "topnav", "attributes": { "aria-label": "Primary", "data-testid": "main-nav" }, "children": [<Node>] }
+// text node
+{ "text": "Sign in" }
+// icon = element + class (Font Awesome): { "element": "i", "class": "fa fa-user" }
+// void tags (img/input/br/hr) carry no children
 ```
 
 `Node` (component form):
@@ -52,9 +56,10 @@ Value encodings: `{ "$enum": "Type.Member" }` · `{ "$bind": "field" }` · `{ "$
 
 1. Emit `@page "<route>"` (if present) and `@layout <shell>` (map `shell` to the layout type; drop the assembly prefix if it's a namespace).
 2. Emit `@using` for each distinct namespace/assembly referenced by nodes (resolve from `src`/`_catalog.json`).
-3. Walk `root`: for an **element** node emit `<tag class="…" style="…"> … </tag>`; for a **component** node emit `<Component Param="…" @bind-X="field" OnX="Handler"> … </Component>`.
+3. Walk `root`: for an **element** node emit `<tag class="…" style="…" attr="…"> … </tag>`; for a **text** node emit its `text` verbatim (HTML-encoded, no wrapper); for a **component** node emit `<Component Param="…" @bind-X="field" OnX="Handler"> … </Component>`.
    - `params` -> attributes. Enums -> `Param="Type.Member"`. Strings/bools/numbers -> literals.
    - `bindings` -> `@bind-<Name>="field"`. `events` -> `<Name>="Handler"`.
+   - `attributes` (element nodes) -> each key/value emitted verbatim on the tag (`data-testid="…"`, `aria-*`, `id`, `href`, …); a valueless entry (`""`) emits a boolean attribute. Void tags (`img`/`input`/`br`/`hr`) self-close with no children.
    - `children` -> nested markup inside the tag. `slots.<Name>` -> `<Name> … </Name>`.
    - `layout` (element nodes) -> inline `style`, one declaration per key using this map: `display`→`display`, `direction`→`flex-direction`, `wrap`→`flex-wrap`, `justify`→`justify-content`, `align`→`align-items`, `gap`→`gap`, `columns`→`grid-template-columns`, `rows`→`grid-template-rows`, `width`/`minWidth`/`maxWidth`→`width`/`min-width`/`max-width`, `padding`→`padding`, `margin`→`margin`, `position`→`position`, `top`/`right`/`bottom`/`left`→same. A raw `style` string (if present) is appended and wins on conflict. Values are literal CSS tokens (e.g. `"12px"`, `"repeat(2,1fr)"`, `"sticky"`). Prefer the project's spacing utility classes over inline style if any exist.
 4. `overlays` -> render conditionally on the relevant state flag.

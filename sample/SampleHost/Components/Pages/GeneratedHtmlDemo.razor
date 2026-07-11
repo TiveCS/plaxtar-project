@@ -1,0 +1,20 @@
+@page "/generated-html-demo"
+@layout SampleLayout
+
+@* Codegen output from designs/html-demo.default.json: native elements, text nodes
+   (incl. mixed content), passthrough attributes, void tags, a Font Awesome icon. *@
+
+<div style="display:flex;flex-direction:column;gap:12px">
+    <nav class="topnav" aria-label="Primary" data-testid="main-nav">
+        <ul>
+            <li>Home</li>
+            <li>Reports</li>
+        </ul>
+    </nav>
+    <h4><i class="fa fa-user"></i> Profile</h4>
+    <p>Welcome <b>back</b>.</p>
+    <img src="/logo.png" alt="Logo" width="80" />
+    <form>
+        <input type="email" placeholder="you@example.com" data-testid="email" required />
+    </form>
+</div>

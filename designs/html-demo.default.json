@@ -1,0 +1,42 @@
+{
+  "schema": "plaxtar.designer/v1",
+  "screen": "html-demo",
+  "state": "default",
+  "fe": "SampleHost",
+  "shell": "SampleLayout",
+  "root": {
+    "element": "div",
+    "layout": { "display": "flex", "direction": "column", "gap": "12px" },
+    "children": [
+      {
+        "element": "nav",
+        "class": "topnav",
+        "attributes": { "aria-label": "Primary", "data-testid": "main-nav" },
+        "children": [
+          { "element": "ul", "children": [
+            { "element": "li", "children": [ { "text": "Home" } ] },
+            { "element": "li", "children": [ { "text": "Reports" } ] }
+          ] }
+        ]
+      },
+      {
+        "element": "h4",
+        "children": [
+          { "element": "i", "class": "fa fa-user" },
+          { "text": " Profile" }
+        ]
+      },
+      {
+        "element": "p",
+        "children": [ { "text": "Welcome " }, { "element": "b", "children": [ { "text": "back" } ] }, { "text": "." } ]
+      },
+      { "element": "img", "attributes": { "src": "/logo.png", "alt": "Logo", "width": "80" } },
+      {
+        "element": "form",
+        "children": [
+          { "element": "input", "attributes": { "type": "email", "placeholder": "you@example.com", "data-testid": "email", "required": "" } }
+        ]
+      }
+    ]
+  }
+}

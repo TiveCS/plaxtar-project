@@ -76,10 +76,24 @@
             }
 
             <div class="ph">Elements</div>
-            <button class="pitem" draggable="true" @ondragstart='() => BeginDragElement("div")'
-                    @onclick='() => Session.AddElement("div")'>&lt;div&gt; <span class="cc">container</span></button>
-            <button class="pitem" draggable="true" @ondragstart='() => BeginDragElement("section")'
-                    @onclick='() => Session.AddElement("section")'>&lt;section&gt; <span class="cc">container</span></button>
+            <button class="pitem" draggable="true" @ondragstart="() => BeginDragText()"
+                    @onclick="() => Session.AddText()">“Text” <span class="cc">text</span></button>
+            <div class="newscreen">
+                <input placeholder="any tag (e.g. table)" value="@_newTag"
+                       @oninput="e => _newTag = e.Value?.ToString() ?? string.Empty" />
+                <button @onclick="AddFreeTag">+ Tag</button>
+            </div>
+            @foreach (var (group, tags) in HtmlTags.Palette)
+            {
+                <div class="egroup">
+                    <span class="eglabel">@group</span>
+                    @foreach (var t in tags)
+                    {
+                        <button class="etag" draggable="true" @ondragstart="() => BeginDragElement(t)"
+                                @onclick="() => Session.AddElement(t)">@t</button>
+                    }
+                </div>
+            }
 
             <div class="ph layers-h">Layers</div>
             @foreach (var (node, depth) in Flatten(Session.Root, 0))
@@ -145,7 +159,15 @@
                     </div>
                 </div>
 
-                @if (sel.IsElement)
+                @if (sel.IsText)
+                {
+                    <div class="prow">
+                        <label>text content</label>
+                        <textarea class="txtnode" rows="3"
+                                  @onchange="e => Session.SetText(sel.Id, e.Value?.ToString())">@sel.Text</textarea>
+                    </div>
+                }
+                else if (sel.IsElement)
                 {
                     var disp = LV(sel, "display");
                     var pos = LV(sel, "position");
@@ -247,6 +269,25 @@
                                     @onchange='e => Session.SetLayout(sel.Id, "left", e.Value?.ToString())' /></div>
                         </div>
                     }
+
+                    <div class="ph slots-h">Attributes</div>
+                    @foreach (var kv in sel.Attributes.ToList())
+                    {
+                        <div class="attrrow">
+                            <input class="attrk" value="@kv.Key"
+                                   @onchange='e => Session.RenameAttribute(sel.Id, kv.Key, e.Value?.ToString() ?? string.Empty)' />
+                            <input class="attrv" value="@kv.Value"
+                                   @onchange='e => Session.SetAttribute(sel.Id, kv.Key, e.Value?.ToString())' />
+                            <button class="attrx" title="remove" @onclick="() => Session.SetAttribute(sel.Id, kv.Key, null)">✕</button>
+                        </div>
+                    }
+                    <div class="attrrow">
+                        <input class="attrk" placeholder="data-testid" value="@_attrKey"
+                               @oninput="e => _attrKey = e.Value?.ToString() ?? string.Empty" />
+                        <input class="attrv" placeholder="value" value="@_attrVal"
+                               @oninput="e => _attrVal = e.Value?.ToString() ?? string.Empty" />
+                        <button class="attrx add" title="add" @onclick="() => AddAttr(sel.Id)">+</button>
+                    </div>
 
                     <div class="ph slots-h">Escape hatches</div>
                     <div class="prow">
@@ -442,6 +483,16 @@
     .pd-node:hover { outline-color: #b9c0f5; }
     .pd-node.pd-sel { outline: 2px solid #5b6cf0; }
     .pitem[draggable=true] { cursor: grab; }
+    .egroup { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 3px 4px; }
+    .eglabel { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #a0a4ad; width: 100%; }
+    .etag { font: 12px ui-monospace, monospace; border: 1px solid #e2e5ec; background: #fff; color: #565a66; border-radius: 6px; padding: 3px 8px; cursor: grab; }
+    .etag:hover { border-color: #5b6cf0; color: #4550c8; }
+    .txtnode { width: 100%; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid #e2e5ec; border-radius: 6px; resize: vertical; }
+    .attrrow { display: flex; gap: 4px; padding: 3px 4px; }
+    .attrk, .attrv { flex: 1; min-width: 0; font: 12px ui-monospace, monospace; padding: 4px 6px; border: 1px solid #e2e5ec; border-radius: 6px; }
+    .attrk { flex: 0 0 42%; }
+    .attrx { border: 1px solid #e2e5ec; background: #fff; color: #c0392b; border-radius: 6px; width: 26px; cursor: pointer; }
+    .attrx.add { color: #16884a; }
     .pd-empty { display: block; padding: 12px; font: 11px ui-monospace, monospace; color: #a0a4ad; border: 1px dashed #cfd4de; border-radius: 6px; text-align: center; }
     .pd-node > .pd-tag { position: absolute; top: -8px; left: 6px; font: 10px ui-monospace, monospace; background: #5b6cf0; color: #fff; padding: 1px 5px; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 2; }
     .pd-node:hover > .pd-tag, .pd-node.pd-sel > .pd-tag { opacity: 1; }
@@ -549,17 +600,38 @@
     private string? _dragNodeId;      // dragging an existing node (reorder/move)
     private string? _dragComponent;   // dragging a new component from the Catalog
     private string? _dragElement;     // dragging a new raw element
+    private bool _dragText;           // dragging a new text node
+    private string _newTag = "";      // free-text "any tag" box
+    private string _attrKey = "";     // new-attribute key box
+    private string _attrVal = "";     // new-attribute value box
 
-    private void BeginDragNode(string id) { _dragNodeId = id; _dragComponent = null; _dragElement = null; }
-    private void BeginDragCatalog(string name) { _dragComponent = name; _dragNodeId = null; _dragElement = null; }
-    private void BeginDragElement(string tag) { _dragElement = tag; _dragNodeId = null; _dragComponent = null; }
+    private void AddAttr(string id)
+    {
+        if (string.IsNullOrWhiteSpace(_attrKey)) return;
+        Session.SetAttribute(id, _attrKey, _attrVal);
+        _attrKey = ""; _attrVal = "";
+    }
+
+    private void ClearDrag() { _dragNodeId = null; _dragComponent = null; _dragElement = null; _dragText = false; }
+    private void BeginDragNode(string id) { ClearDrag(); _dragNodeId = id; }
+    private void BeginDragCatalog(string name) { ClearDrag(); _dragComponent = name; }
+    private void BeginDragElement(string tag) { ClearDrag(); _dragElement = tag; }
+    private void BeginDragText() { ClearDrag(); _dragText = true; }
+
+    private void AddFreeTag()
+    {
+        if (string.IsNullOrWhiteSpace(_newTag)) return;
+        Session.AddElement(_newTag);
+        _newTag = "";
+    }
 
     private void DropOn(string? targetId)
     {
-        if (_dragComponent is { } c) Session.DropComponent(targetId, c);
+        if (_dragText) Session.DropNew(targetId, new EditableNode { Text = "text" });
+        else if (_dragComponent is { } c) Session.DropComponent(targetId, c);
         else if (_dragElement is { } e) Session.DropElement(targetId, e);
         else if (_dragNodeId is { } n) Session.MoveNode(n, targetId);
-        _dragNodeId = _dragComponent = _dragElement = null;
+        ClearDrag();
     }
 
     // Canvas tree rendered inline by the page so click handlers are page-bound
@@ -587,31 +659,40 @@
         builder.AddContent(13, node.DisplayName);
         builder.CloseElement();
 
-        if (node.IsElement)
+        if (node.IsText)
         {
-            builder.OpenElement(14, node.Element!);
-            if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(15, "class", node.CssClass);
-            if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(16, "style", css);
-            if (node.Children.Count == 0)
+            builder.AddContent(14, node.Text);
+        }
+        else if (node.IsElement)
+        {
+            builder.OpenElement(15, node.Element!);
+            if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(16, "class", node.CssClass);
+            if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(17, "style", css);
+            var aseq = 18;
+            foreach (var (k, v) in node.Attributes) builder.AddAttribute(aseq++, k, v);
+            if (!node.IsVoidElement)
             {
-                builder.OpenElement(17, "span");
-                builder.AddAttribute(18, "class", "pd-empty");
-                builder.AddContent(19, $"empty <{node.Element}> — drop or add into it");
-                builder.CloseElement();
-            }
-            else
-            {
-                var seq = 20;
-                foreach (var child in node.Children) builder.AddContent(seq++, RenderNode(child));
+                if (node.Children.Count == 0)
+                {
+                    builder.OpenElement(30, "span");
+                    builder.AddAttribute(31, "class", "pd-empty");
+                    builder.AddContent(32, $"empty <{node.Element}> — drop or add into it");
+                    builder.CloseElement();
+                }
+                else
+                {
+                    var seq = 33;
+                    foreach (var child in node.Children) builder.AddContent(seq++, RenderNode(child));
+                }
             }
             builder.CloseElement();
         }
         else
         {
             var type = Resolver.Resolve(node.Component!);
-            builder.OpenComponent<DynamicComponent>(40);
-            builder.AddComponentParameter(41, "Type", type);
-            builder.AddComponentParameter(42, "Parameters", BuildParams(node, type));
+            builder.OpenComponent<DynamicComponent>(60);
+            builder.AddComponentParameter(61, "Type", type);
+            builder.AddComponentParameter(62, "Parameters", BuildParams(node, type));
             builder.CloseComponent();
         }
 
@@ -623,21 +704,30 @@
     // flex/grid item identity and width resolution match the generated .razor.
     private RenderFragment RenderRaw(EditableNode node) => builder =>
     {
-        if (node.IsElement)
+        if (node.IsText)
         {
-            builder.OpenElement(0, node.Element!);
-            if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(1, "class", node.CssClass);
-            if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(2, "style", css);
-            var seq = 3;
-            foreach (var child in node.Children) builder.AddContent(seq++, RenderRaw(child));
+            builder.AddContent(0, node.Text);
+        }
+        else if (node.IsElement)
+        {
+            builder.OpenElement(1, node.Element!);
+            if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(2, "class", node.CssClass);
+            if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(3, "style", css);
+            var aseq = 4;
+            foreach (var (k, v) in node.Attributes) builder.AddAttribute(aseq++, k, v);
+            if (!node.IsVoidElement)
+            {
+                var seq = 20;
+                foreach (var child in node.Children) builder.AddContent(seq++, RenderRaw(child));
+            }
             builder.CloseElement();
         }
         else
         {
             var type = Resolver.Resolve(node.Component!);
-            builder.OpenComponent<DynamicComponent>(4);
-            builder.AddComponentParameter(5, "Type", type);
-            builder.AddComponentParameter(6, "Parameters", BuildParams(node, type, preview: true));
+            builder.OpenComponent<DynamicComponent>(60);
+            builder.AddComponentParameter(61, "Type", type);
+            builder.AddComponentParameter(62, "Parameters", BuildParams(node, type, preview: true));
             builder.CloseComponent();
         }
     };

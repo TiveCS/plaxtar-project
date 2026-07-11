@@ -21,10 +21,12 @@ public sealed class NodeDto
 {
     [JsonPropertyName("component")] public string? Component { get; set; }
     [JsonPropertyName("element")] public string? Element { get; set; }
+    [JsonPropertyName("text")] public string? Text { get; set; }
     [JsonPropertyName("src")] public string? Src { get; set; }
     [JsonPropertyName("class")] public string? CssClass { get; set; }
     [JsonPropertyName("style")] public string? Style { get; set; }
     [JsonPropertyName("layout")] public Dictionary<string, string>? Layout { get; set; }
+    [JsonPropertyName("attributes")] public Dictionary<string, string>? Attributes { get; set; }
     [JsonPropertyName("params")] public Dictionary<string, JsonElement> Params { get; set; } = new();
     [JsonPropertyName("bindings")] public Dictionary<string, string>? Bindings { get; set; }
     [JsonPropertyName("events")] public Dictionary<string, string>? Events { get; set; }
