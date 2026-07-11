@@ -2,7 +2,7 @@
 
 ## Status
 
-accepted
+accepted — Edit-mode *width* consequence amended by [0006](0006-edit-mode-floating-panels-honest-width-vs-occlusion.md) (Edit now floats panels over a full-width canvas; the wrapper-drift reasoning and Preview-as-truth below still stand)
 
 ## Decision
 
