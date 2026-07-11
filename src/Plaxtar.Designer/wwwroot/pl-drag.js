@@ -100,12 +100,33 @@ function onDrop(e) {
 
 function onEnd() { dragging = false; draggedId = null; clearViz(); }
 
+// --- Keyboard shortcuts (#28) --------------------------------------------------
+function inField() {
+    const el = document.activeElement;
+    return !!(el && el.closest && el.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]'));
+}
+
+function onKey(e) {
+    const ctrl = e.ctrlKey || e.metaKey;
+    let cmd = null;
+    if (e.key === 'Delete') { if (inField()) return; cmd = 'delete'; }
+    else if (ctrl && !e.shiftKey && e.key.toLowerCase() === 's') cmd = 'save';
+    else if (ctrl && e.key.toLowerCase() === 'g') cmd = 'preview';
+    else if (ctrl && e.key.toLowerCase() === 'b') cmd = 'togglePanels';
+    else if (ctrl && e.key.toLowerCase() === 'z') { if (inField()) return; cmd = e.shiftKey ? 'redo' : 'undo'; }
+    else if (ctrl && e.key.toLowerCase() === 'y') { if (inField()) return; cmd = 'redo'; }
+    if (!cmd) return;
+    e.preventDefault();
+    if (dotnet) dotnet.invokeMethodAsync('OnShortcut', cmd);
+}
+
 export function init(ref) {
     dotnet = ref;
     document.addEventListener('dragstart', onStart, true);
     document.addEventListener('dragover', onOver, true);
     document.addEventListener('drop', onDrop, true);
     document.addEventListener('dragend', onEnd, true);
+    document.addEventListener('keydown', onKey, true);
 }
 
 export function dispose() {
@@ -113,6 +134,7 @@ export function dispose() {
     document.removeEventListener('dragover', onOver, true);
     document.removeEventListener('drop', onDrop, true);
     document.removeEventListener('dragend', onEnd, true);
+    document.removeEventListener('keydown', onKey, true);
     if (line) { line.remove(); line = null; }
     dotnet = null;
 }

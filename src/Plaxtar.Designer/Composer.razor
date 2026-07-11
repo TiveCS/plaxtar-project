@@ -857,6 +857,43 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    // Keyboard shortcuts (#28), dispatched from the JS keydown layer.
+    [JSInvokable]
+    public async Task OnShortcut(string cmd)
+    {
+        switch (cmd)
+        {
+            case "delete": if (Session.SelectedId is { } id) Session.Remove(id); break;   // immediate (undoable)
+            case "save": await SaveAsync(); break;
+            case "preview": TogglePreview(); break;
+            case "togglePanels": TogglePanels(); break;
+            case "undo": Session.Undo(); break;
+            case "redo": Session.Redo(); break;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // Ctrl+B: hide all panels for a full-canvas Edit view, then restore what was open.
+    private bool _panelsHidden;
+    private Panel _panelBefore;
+    private bool _propsBefore;
+    private void TogglePanels()
+    {
+        if (_panel != Panel.None || _propsOpen)
+        {
+            _panelBefore = _panel; _propsBefore = _propsOpen;
+            _panel = Panel.None; _propsOpen = false; _panelsHidden = true;
+        }
+        else if (_panelsHidden)
+        {
+            _panel = _panelBefore; _propsOpen = _propsBefore; _panelsHidden = false;
+        }
+        else
+        {
+            _panel = Panel.Layers; _propsOpen = true;
+        }
+    }
+
     // Canvas tree rendered inline by the page so click handlers are page-bound
     // (interactive), not authored inside a child component (which isn't).
     private RenderFragment RenderNode(EditableNode node) => builder =>
