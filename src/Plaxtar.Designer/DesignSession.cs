@@ -129,6 +129,39 @@ public sealed class DesignSession
         var node = Find(Root, id);
         if (node is null) return;
         node.Params[name] = value;
+        node.Bindings.Remove(name);   // a literal value replaces any @bind on the same param
+        Notify();
+    }
+
+    // @bind-<name>="field": records the bound field name; clears the literal so the
+    // param exports under `bindings`, not `params`. Empty field removes the binding.
+    public void SetBinding(string id, string name, string? field)
+    {
+        var node = Find(Root, id);
+        if (node is null) return;
+        if (string.IsNullOrWhiteSpace(field)) node.Bindings.Remove(name);
+        else { node.Bindings[name] = field.Trim(); node.Params.Remove(name); }
+        Notify();
+    }
+
+    // <Name>="Handler" for an EventCallback param. Empty handler removes the event.
+    public void SetEvent(string id, string name, string? handler)
+    {
+        var node = Find(Root, id);
+        if (node is null) return;
+        if (string.IsNullOrWhiteSpace(handler)) node.Events.Remove(name);
+        else node.Events[name] = handler.Trim();
+        Notify();
+    }
+
+    // Complex-object param: a BindExpr ($bind field) or RawExpr ($raw expression),
+    // stored in Params so it exports inside `params`. Null clears it.
+    public void SetComplex(string id, string name, object? marker)
+    {
+        var node = Find(Root, id);
+        if (node is null) return;
+        if (marker is null) node.Params.Remove(name);
+        else node.Params[name] = marker;
         Notify();
     }
 
@@ -184,6 +217,10 @@ public sealed class DesignSession
             if (prop is null) continue;
             node.Params[key] = ParamCodec.FromJson(el, prop.PropertyType);
         }
+        if (dto.Bindings is not null)
+            foreach (var (name, field) in dto.Bindings) node.Bindings[name] = field;
+        if (dto.Events is not null)
+            foreach (var (name, handler) in dto.Events) node.Events[name] = handler;
         node.Children = dto.Children.Select(ToEditable).ToList();
         if (dto.Slots is not null)
             foreach (var (slot, kids) in dto.Slots)
@@ -218,6 +255,8 @@ public sealed class DesignSession
             }
             dict["params"] = pars;
         }
+        if (n.Bindings.Count > 0) dict["bindings"] = new Dictionary<string, string>(n.Bindings);
+        if (n.Events.Count > 0) dict["events"] = new Dictionary<string, string>(n.Events);
         if (n.Children.Count > 0)
             dict["children"] = n.Children.Select(ToDto).ToList();
 

@@ -1,0 +1,41 @@
+@namespace SampleHost.SampleUi
+
+<label class="tf">
+    @if (!string.IsNullOrEmpty(Label)) { <span class="tf-lbl">@Label</span> }
+    <input class="tf-in" value="@Value" placeholder="@Placeholder"
+           @onchange="OnInput" @onkeydown="OnKey" />
+</label>
+
+<style>
+    .tf { display: flex; flex-direction: column; gap: 4px; font-family: system-ui, sans-serif; }
+    .tf-lbl { font-size: 12px; color: #565a66; }
+    .tf-in { font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid #d5d9e2; border-radius: 8px; }
+</style>
+
+@code {
+    // Two-way bindable (Value + ValueChanged is the @bind convention).
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter] public string? Label { get; set; }          // primitive
+    [Parameter] public string? Placeholder { get; set; }    // primitive
+    [Parameter] public EventCallback OnEnter { get; set; }  // event
+    [Parameter] public Validation? Rules { get; set; }      // complex object param
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString();
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await OnEnter.InvokeAsync();
+    }
+
+    public sealed class Validation
+    {
+        public bool Required { get; set; }
+        public int MaxLength { get; set; }
+    }
+}

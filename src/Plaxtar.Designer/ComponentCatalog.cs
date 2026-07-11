@@ -6,7 +6,7 @@ namespace Plaxtar.Designer;
 // A parameter's editing kind (SPEC §6). Drives both the props panel and codegen.
 public enum ParamKind { Primitive, Enum, ChildContent, Slot, TemplatedSlot, Event, Complex }
 
-public sealed record ParamInfo(string Name, string Type, ParamKind Kind, string[]? EnumOptions);
+public sealed record ParamInfo(string Name, string Type, ParamKind Kind, string[]? EnumOptions, bool Bindable = false);
 public sealed record ComponentInfo(string Name, string Assembly, string? Src, IReadOnlyList<ParamInfo> Params);
 
 // Reflects the given assemblies for component types and their [Parameter] metadata.
@@ -30,9 +30,30 @@ public sealed class ComponentCatalog
                 if (t is null || t.IsAbstract || !typeof(IComponent).IsAssignableFrom(t)) continue;
                 if (namespaceFilter is not null && t.Namespace?.StartsWith(namespaceFilter, StringComparison.Ordinal) != true) continue;
 
-                var pars = t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                     .Where(p => p.IsDefined(typeof(ParameterAttribute)) || p.IsDefined(typeof(CascadingParameterAttribute)))
-                    .Select(ToParamInfo)
+                    .ToArray();
+
+                // A param P is @bind-able iff the component also exposes a `PChanged`
+                // EventCallback (the Blazor two-way binding convention).
+                var changed = props
+                    .Where(p => p.Name.EndsWith("Changed", StringComparison.Ordinal)
+                                && (p.PropertyType == typeof(EventCallback)
+                                    || (p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition() == typeof(EventCallback<>))))
+                    .Select(p => p.Name[..^"Changed".Length])
+                    .ToHashSet(StringComparer.Ordinal);
+
+                // A `XChanged` EventCallback backing a bindable param X is folded into
+                // X's Bindable flag (@bind-X), not surfaced as its own editable event.
+                var paramNames = props.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+                bool IsBindingBacker(PropertyInfo p) =>
+                    p.Name.EndsWith("Changed", StringComparison.Ordinal)
+                    && changed.Contains(p.Name[..^"Changed".Length])
+                    && paramNames.Contains(p.Name[..^"Changed".Length]);
+
+                var pars = props
+                    .Where(p => !IsBindingBacker(p))
+                    .Select(p => ToParamInfo(p, changed.Contains(p.Name)))
                     .ToArray();
 
                 _components.Add(new ComponentInfo(t.Name, asm.GetName().Name ?? "", sources.Find(t.Name), pars));
@@ -41,11 +62,11 @@ public sealed class ComponentCatalog
         _components.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
     }
 
-    private static ParamInfo ToParamInfo(PropertyInfo p)
+    private static ParamInfo ToParamInfo(PropertyInfo p, bool bindable)
     {
         var pt = p.PropertyType;
         var (kind, options) = Classify(p.Name, pt);
-        return new ParamInfo(p.Name, FriendlyType(pt), kind, options);
+        return new ParamInfo(p.Name, FriendlyType(pt), kind, options, bindable);
     }
 
     private static (ParamKind, string[]?) Classify(string name, Type pt)

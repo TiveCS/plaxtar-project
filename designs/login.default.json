@@ -1,0 +1,34 @@
+{
+  "schema": "plaxtar.designer/v1",
+  "screen": "login",
+  "state": "default",
+  "fe": "SampleHost",
+  "shell": "SampleLayout",
+  "root": {
+    "element": "div",
+    "class": "login-form",
+    "style": "display:flex;flex-direction:column;gap:12px",
+    "children": [
+      {
+        "component": "TextField",
+        "src": "Components/SampleUi/TextField.razor",
+        "params": {
+          "Label": "Email",
+          "Placeholder": "you@example.com",
+          "Rules": { "$raw": "new TextField.Validation { Required = true, MaxLength = 120 }" }
+        },
+        "bindings": { "Value": "email" },
+        "events": { "OnEnter": "HandleSubmit" }
+      },
+      {
+        "component": "Badge",
+        "src": "Components/SampleUi/Badge.razor",
+        "params": {
+          "Text": "Sign in",
+          "Variant": { "$enum": "BadgeVariant.Ok" }
+        },
+        "events": { "OnClick": "HandleSubmit" }
+      }
+    ]
+  }
+}

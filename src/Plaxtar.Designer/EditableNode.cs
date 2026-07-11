@@ -13,6 +13,8 @@ public sealed class EditableNode
     public string? CssClass { get; set; }    // element: class attribute
     public string? Style { get; set; }       // element: inline style
     public Dictionary<string, object?> Params { get; set; } = new();
+    public Dictionary<string, string> Bindings { get; set; } = new();       // @bind-<Param> -> field name
+    public Dictionary<string, string> Events { get; set; } = new();         // EventCallback <Name> -> handler name
     public List<EditableNode> Children { get; set; } = new();               // default ChildContent
     public Dictionary<string, List<EditableNode>> Slots { get; set; } = new(); // named RenderFragments
 
@@ -20,3 +22,9 @@ public sealed class EditableNode
     public string DisplayName => Element is not null ? $"<{Element}>" : Component ?? "?";
     public IEnumerable<EditableNode> AllChildren => Children.Concat(Slots.Values.SelectMany(x => x));
 }
+
+// Complex-param value markers (schema §7.3): a field reference `{ "$bind": "model" }`
+// or a raw C# expression escape hatch `{ "$raw": "new Opts{…}" }`. The designer only
+// ever captures the name/expression, never runtime logic.
+public sealed record BindExpr(string Field);
+public sealed record RawExpr(string Code);

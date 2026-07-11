@@ -162,6 +162,46 @@
                                 <input type="text" value="@current"
                                        @onchange="e => Session.SetParam(sel.Id, pi.Name, e.Value?.ToString())" />
                             }
+                            @if (pi.Bindable)
+                            {
+                                <input class="bindbox" type="text" placeholder="@("@bind") → field"
+                                       value="@(sel.Bindings.GetValueOrDefault(pi.Name))"
+                                       @onchange="e => Session.SetBinding(sel.Id, pi.Name, e.Value?.ToString())" />
+                            }
+                        </div>
+                    }
+                }
+
+                var events = EventParams(sel.Component!);
+                @if (events.Count > 0)
+                {
+                    <div class="ph slots-h">Events</div>
+                    @foreach (var ev in events)
+                    {
+                        <div class="prow">
+                            <label>@ev.Name <span class="ptype">@ev.Type</span></label>
+                            <input type="text" placeholder="handler name e.g. HandleClick"
+                                   value="@(sel.Events.GetValueOrDefault(ev.Name))"
+                                   @onchange="e => Session.SetEvent(sel.Id, ev.Name, e.Value?.ToString())" />
+                        </div>
+                    }
+                }
+
+                var complex = ComplexParams(sel.Component!);
+                @if (complex.Count > 0)
+                {
+                    <div class="ph slots-h">Complex</div>
+                    @foreach (var cp in complex)
+                    {
+                        var cur = sel.Params.GetValueOrDefault(cp.Name);
+                        <div class="prow">
+                            <label>@cp.Name <span class="ptype">@cp.Type</span></label>
+                            <input type="text" placeholder="$bind → field"
+                                   value="@((cur as BindExpr)?.Field)"
+                                   @onchange="e => Session.SetComplex(sel.Id, cp.Name, MakeBind(e.Value?.ToString()))" />
+                            <input class="rawbox" type="text" placeholder="$raw → new Foo{ }"
+                                   value="@((cur as RawExpr)?.Code)"
+                                   @onchange="e => Session.SetComplex(sel.Id, cp.Name, MakeRaw(e.Value?.ToString()))" />
                         </div>
                     }
                 }
@@ -218,6 +258,7 @@
     .prow label { display: block; font-size: 11px; color: #565a66; margin-bottom: 4px; }
     .prow .ptype { color: #b0b4bd; font-family: ui-monospace, monospace; }
     .prow input[type=text], .prow input[type=number], .prow select { width: 100%; font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid #e2e5ec; border-radius: 6px; }
+    .prow .bindbox, .prow .rawbox { margin-top: 4px; font-family: ui-monospace, monospace; font-size: 12px; border-style: dashed; border-color: #c3b6ef; background: #faf9ff; }
     .muted { color: #8a8f9c; font-size: 12.5px; padding: 4px; }
 
     /* selection wrapper (edit mode only; not exported) */
@@ -331,7 +372,25 @@
 
     private Dictionary<string, object?> BuildParams(EditableNode node, Type type)
     {
-        var p = new Dictionary<string, object?>(node.Params);
+        var p = new Dictionary<string, object?>();
+
+        // Literal params. Complex-object markers ($bind/$raw) are design-time only —
+        // they can't be materialized, so skip them (the component uses its default).
+        foreach (var (k, v) in node.Params)
+        {
+            if (v is BindExpr or RawExpr) continue;
+            p[k] = v;
+        }
+
+        // @bind params: seed ephemeral local state so a bound input is previewable.
+        // Never exported — bindings serialize under `bindings`, not `params`.
+        foreach (var (name, _) in node.Bindings)
+        {
+            var prop = type.GetProperty(name);
+            if (prop is null) continue;
+            var key = $"{node.Id}:{name}";
+            p[name] = _ephemeral.TryGetValue(key, out var val) ? val : DefaultOf(prop.PropertyType);
+        }
 
         if (type.GetProperty("ChildContent") is not null)
             p["ChildContent"] = node.Children.Count > 0 ? Frag(node.Children) : EmptyFrag($"empty {node.Component} — add into it");
@@ -342,6 +401,12 @@
 
         return p;
     }
+
+    private readonly Dictionary<string, object?> _ephemeral = new();
+
+    private static object? DefaultOf(Type t) =>
+        t == typeof(string) ? "" :
+        (Nullable.GetUnderlyingType(t) is null && t.IsValueType ? Activator.CreateInstance(t) : null);
 
     private RenderFragment Frag(List<EditableNode> kids) => b =>
     {
@@ -368,6 +433,15 @@
         Session.Info(component)?.Params
             .Where(p => p.Kind is ParamKind.Primitive or ParamKind.Enum)
             .ToList() ?? new();
+
+    private List<ParamInfo> EventParams(string component) =>
+        Session.Info(component)?.Params.Where(p => p.Kind == ParamKind.Event).ToList() ?? new();
+
+    private List<ParamInfo> ComplexParams(string component) =>
+        Session.Info(component)?.Params.Where(p => p.Kind == ParamKind.Complex).ToList() ?? new();
+
+    private static object? MakeBind(string? field) => string.IsNullOrWhiteSpace(field) ? null : new BindExpr(field.Trim());
+    private static object? MakeRaw(string? code) => string.IsNullOrWhiteSpace(code) ? null : new RawExpr(code.Trim());
 
     private Type ParamType(string component, string name) =>
         Resolver.Resolve(component).GetProperty(name)!.PropertyType;

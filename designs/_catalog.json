@@ -9,7 +9,8 @@
         {
           "Name": "Text",
           "Type": "string",
-          "Kind": "Primitive"
+          "Kind": "Primitive",
+          "Bindable": false
         },
         {
           "Name": "Variant",
@@ -19,12 +20,14 @@
             "Ok",
             "Warn",
             "Danger"
-          ]
+          ],
+          "Bindable": false
         },
         {
           "Name": "OnClick",
           "Type": "EventCallback",
-          "Kind": "Event"
+          "Kind": "Event",
+          "Bindable": false
         }
       ]
     },
@@ -36,7 +39,8 @@
         {
           "Name": "Text",
           "Type": "string",
-          "Kind": "Primitive"
+          "Kind": "Primitive",
+          "Bindable": false
         }
       ]
     },
@@ -48,17 +52,20 @@
         {
           "Name": "Bordered",
           "Type": "bool",
-          "Kind": "Primitive"
+          "Kind": "Primitive",
+          "Bindable": false
         },
         {
           "Name": "HeaderContent",
           "Type": "RenderFragment",
-          "Kind": "Slot"
+          "Kind": "Slot",
+          "Bindable": false
         },
         {
           "Name": "ChildContent",
           "Type": "RenderFragment",
-          "Kind": "ChildContent"
+          "Kind": "ChildContent",
+          "Bindable": false
         }
       ]
     },
@@ -76,7 +83,8 @@
         {
           "Name": "Body",
           "Type": "RenderFragment",
-          "Kind": "Slot"
+          "Kind": "Slot",
+          "Bindable": false
         }
       ]
     },
@@ -88,12 +96,51 @@
         {
           "Name": "Gap",
           "Type": "int",
-          "Kind": "Primitive"
+          "Kind": "Primitive",
+          "Bindable": false
         },
         {
           "Name": "ChildContent",
           "Type": "RenderFragment",
-          "Kind": "ChildContent"
+          "Kind": "ChildContent",
+          "Bindable": false
+        }
+      ]
+    },
+    {
+      "Name": "TextField",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/TextField.razor",
+      "Params": [
+        {
+          "Name": "Value",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": true
+        },
+        {
+          "Name": "Label",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "Placeholder",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "OnEnter",
+          "Type": "EventCallback",
+          "Kind": "Event",
+          "Bindable": false
+        },
+        {
+          "Name": "Rules",
+          "Type": "Validation",
+          "Kind": "Complex",
+          "Bindable": false
         }
       ]
     }

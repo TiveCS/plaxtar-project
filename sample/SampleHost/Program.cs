@@ -60,6 +60,17 @@ if (app.Environment.IsDevelopment())
         var path = await CatalogManifest.WriteAsync(dir, cat);
         return Results.Ok(new { written = path, count = cat.Components.Count });
     });
+
+    // Dev/CI: load a screen file through the session and re-serialize it, proving the
+    // schema round-trips (params, $enum/$bind/$raw markers, bindings, events).
+    app.MapGet("/_designer/roundtrip/{file}", async (string file, DesignSession s, IWebHostEnvironment env) =>
+    {
+        var dir = DesignPaths.DesignsDir(env.ContentRootPath);
+        await s.LoadAsync(Path.Combine(dir, file + ".json"));
+        var outDir = Path.Combine(Path.GetTempPath(), "plaxtar-rt");
+        var outPath = await s.SaveAsync(outDir);
+        return Results.Text(await File.ReadAllTextAsync(outPath), "application/json");
+    });
 }
 #endif
 

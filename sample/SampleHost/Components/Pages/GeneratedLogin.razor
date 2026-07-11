@@ -1,0 +1,27 @@
+@page "/generated-login"
+@layout SampleLayout
+@using SampleHost.SampleUi
+
+@* Codegen output from designs/login.default.json (schema plaxtar.designer/v1),
+   per the CLAUDE.md contract. Exercises #13: a @bind input, events, and a $raw
+   complex param. @code holds stubs (field per binding, method per event). *@
+
+<div class="login-form" style="display:flex;flex-direction:column;gap:12px">
+    <TextField Label="Email"
+               Placeholder="you@example.com"
+               Rules="new TextField.Validation { Required = true, MaxLength = 120 }"
+               @bind-Value="email"
+               OnEnter="HandleSubmit" />
+    <Badge Text="Sign in"
+           Variant="Badge.BadgeVariant.Ok"
+           OnClick="HandleSubmit" />
+</div>
+
+@code {
+    private string? email;                 // from bindings: Value -> email
+
+    private void HandleSubmit()            // from events: OnEnter / OnClick -> HandleSubmit
+    {
+        // TODO: implement
+    }
+}
