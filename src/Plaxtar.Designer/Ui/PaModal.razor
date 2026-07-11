@@ -1,0 +1,47 @@
+@* Centered modal over a dimmed backdrop. Two-way @bind-Open. Closes on backdrop (unless
+   disabled), Esc, or ✕. PaDialog builds on this; reserved for richer designer UX later. *@
+@namespace Plaxtar.Designer.Ui
+
+@if (Open)
+{
+    <div class="pa-modal-back" @onclick="BackdropClose">
+        <div class="pa-modal" tabindex="-1" @ref="_card"
+             @onclick:stopPropagation="true" @onkeydown="OnKey">
+            <div class="pa-modal-h">
+                <span class="pa-modal-t">@Title</span>
+                <button type="button" class="pa-modal-x" title="close" @onclick="CloseAsync">&#10005;</button>
+            </div>
+            <div class="pa-modal-b">@ChildContent</div>
+            @if (Footer is not null) { <div class="pa-modal-f">@Footer</div> }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public bool CloseOnBackdrop { get; set; } = true;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private ElementReference _card;
+    private bool _wasOpen;
+
+    private async Task CloseAsync()
+    {
+        await OpenChanged.InvokeAsync(false);
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task BackdropClose() { if (CloseOnBackdrop) await CloseAsync(); }
+
+    private async Task OnKey(KeyboardEventArgs e) { if (e.Key == "Escape") await CloseAsync(); }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Open && !_wasOpen) { _wasOpen = true; try { await _card.FocusAsync(); } catch { } }
+        else if (!Open) { _wasOpen = false; }
+    }
+}

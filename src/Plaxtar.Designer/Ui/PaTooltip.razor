@@ -1,0 +1,10 @@
+@* CSS-only hover tooltip. Wraps a trigger; shows Text on hover/focus. Placement via Side. *@
+@namespace Plaxtar.Designer.Ui
+
+<span class="pa-tip pa-tip-@Side" data-tip="@Text">@ChildContent</span>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public string Side { get; set; } = "right";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

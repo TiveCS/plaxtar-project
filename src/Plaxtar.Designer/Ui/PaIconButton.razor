@@ -1,0 +1,17 @@
+@* Icon-only button (rail icons, close/up/down, etc.). Pair with PaTooltip for a label. *@
+@namespace Plaxtar.Designer.Ui
+
+<button type="button" class="pa-iconbtn@(Active ? " pa-on" : "")"
+        disabled="@Disabled" title="@Title" aria-label="@Title" @onclick="HandleClick">
+    @ChildContent
+</button>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private async Task HandleClick() { if (!Disabled) await OnClick.InvokeAsync(); }
+}

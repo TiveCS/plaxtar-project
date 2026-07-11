@@ -1,0 +1,25 @@
+.pa-tip {
+    position: relative;
+    display: inline-flex;
+}
+
+.pa-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    z-index: 60;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: #111827;
+    color: #fff;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .1s ease .3s;
+}
+
+.pa-tip:hover::after { opacity: 1; }
+
+.pa-tip-right::after { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 8px; }
+.pa-tip-bottom::after { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 6px; }
+.pa-tip-top::after { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 6px; }

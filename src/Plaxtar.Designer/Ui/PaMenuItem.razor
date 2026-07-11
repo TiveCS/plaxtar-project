@@ -1,0 +1,25 @@
+@* A row in a PaMenu. Runs OnClick then closes the enclosing menu. `Danger` tints it. *@
+@namespace Plaxtar.Designer.Ui
+
+<button type="button" class="pa-mi@(Danger ? " pa-mi-danger" : "")" disabled="@Disabled" @onclick="Run">
+    @if (!string.IsNullOrEmpty(Icon)) { <span class="pa-mi-ic">@Icon</span> }
+    <span class="pa-mi-lb">@ChildContent</span>
+</button>
+
+@code {
+    [CascadingParameter] public PaMenu? Menu { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public bool Danger { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool KeepOpen { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private async Task Run()
+    {
+        if (Disabled) return;
+        await OnClick.InvokeAsync();
+        if (!KeepOpen && Menu is not null) await Menu.CloseAsync();
+    }
+}

@@ -1,0 +1,65 @@
+@* Anchored floating layer: a Trigger that toggles a floating Body. Closes on
+   outside-click (transparent full-viewport backdrop) and Esc (keydown bubbles from
+   any focused descendant to the body). Foundation under PaCombobox and PaMenu. *@
+@namespace Plaxtar.Designer.Ui
+
+<div class="pa-pop">
+    <div class="pa-pop-trigger" @onclick="Toggle">@Trigger</div>
+    @if (_open)
+    {
+        <div class="pa-pop-backdrop" @onclick="CloseAsync"></div>
+        <div class="pa-pop-body pa-align-@Align" tabindex="-1" @ref="_body" @onkeydown="OnKey">
+            @Body
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? Trigger { get; set; }
+    [Parameter] public RenderFragment? Body { get; set; }
+    [Parameter] public string Align { get; set; } = "start";   // start | end
+    [Parameter] public EventCallback OnOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _open;
+    private bool _justOpened;
+    private ElementReference _body;
+
+    public bool IsOpen => _open;
+
+    public async Task OpenAsync()
+    {
+        if (_open) return;
+        _open = true; _justOpened = true;
+        await OnOpen.InvokeAsync();
+        StateHasChanged();
+    }
+
+    public async Task CloseAsync()
+    {
+        if (!_open) return;
+        _open = false;
+        await OnClose.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task Toggle()
+    {
+        if (_open) await CloseAsync();
+        else await OpenAsync();
+    }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await CloseAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_justOpened)
+        {
+            _justOpened = false;
+            try { await _body.FocusAsync(); } catch { /* body gone */ }
+        }
+    }
+}

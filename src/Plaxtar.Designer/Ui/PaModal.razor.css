@@ -1,0 +1,37 @@
+.pa-modal-back {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(17, 24, 39, .45);
+}
+
+.pa-modal {
+    width: 100%;
+    max-width: 440px;
+    outline: 0;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+    overflow: hidden;
+}
+
+.pa-modal-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef0f3;
+}
+.pa-modal-t { font-weight: 600; color: #111827; }
+.pa-modal-x {
+    border: 0; background: transparent; color: #9ca3af;
+    cursor: pointer; font-size: 14px; line-height: 1; padding: 4px;
+}
+.pa-modal-x:hover { color: #4b5563; }
+
+.pa-modal-b { padding: 14px; color: #374151; }
+.pa-modal-f { padding: 12px 14px; border-top: 1px solid #eef0f3; }

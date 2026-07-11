@@ -1,0 +1,29 @@
+@* Pa* internal UI kit (Composer chrome only — never in a consumer catalog; the
+   catalog reflects only options.ComponentAssemblies, never this assembly).
+   PaButton: styled button whose OWN @onclick fires and relays to OnClick. Its
+   interactivity in Composer chrome is what issue #19 gates the kit on. *@
+@namespace Plaxtar.Designer.Ui
+
+<button type="button" class="@CssClass" disabled="@Disabled" title="@Title" @onclick="HandleClick">
+    @ChildContent
+</button>
+
+@code {
+    public enum Kind { Primary, Ghost, Danger }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public Kind Variant { get; set; } = Kind.Ghost;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool IconOnly { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private string CssClass =>
+        $"pa-btn pa-{Variant.ToString().ToLowerInvariant()}{(IconOnly ? " pa-icon" : "")}";
+
+    private async Task HandleClick()
+    {
+        if (Disabled) return;
+        await OnClick.InvokeAsync();
+    }
+}

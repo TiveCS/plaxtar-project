@@ -1,0 +1,20 @@
+.pa-mi {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 9px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    font: inherit;
+    color: #1f2937;
+    text-align: left;
+    cursor: pointer;
+}
+.pa-mi:hover:not(:disabled) { background: #f3f4f6; }
+.pa-mi:disabled { opacity: .45; cursor: default; }
+.pa-mi-ic { width: 16px; text-align: center; opacity: .75; }
+.pa-mi-lb { flex: 1; }
+.pa-mi-danger { color: #b91c1c; }
+.pa-mi-danger:hover:not(:disabled) { background: #fef2f2; }

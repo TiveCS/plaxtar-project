@@ -1,0 +1,72 @@
+@* Floating action list with two triggers: `anchor` (click the Target) or `contextmenu`
+   (right-click the Target). Opens at the cursor as a fixed layer; closes on
+   outside-click / Esc / after an item runs. Items are PaMenuItem (or any markup);
+   the Insert flyout = PaMenu with a PaSearchBar + filtered items as ChildContent. *@
+@namespace Plaxtar.Designer.Ui
+@using System.Globalization
+
+<div class="pa-menu-target"
+     @oncontextmenu="OnContext" @oncontextmenu:preventDefault="_isContext"
+     @onclick="OnAnchorClick">
+    @Target
+</div>
+
+@if (_open)
+{
+    <div class="pa-menu-backdrop"
+         @onclick="CloseAsync"
+         @oncontextmenu="CloseAsync" @oncontextmenu:preventDefault="true"></div>
+    <CascadingValue Value="this" IsFixed="true">
+        <div class="pa-menu" style="@PosStyle" tabindex="-1" @ref="_menu" @onkeydown="OnKey">
+            @ChildContent
+        </div>
+    </CascadingValue>
+}
+
+@code {
+    [Parameter] public string Trigger { get; set; } = "anchor";   // anchor | contextmenu
+    [Parameter] public RenderFragment? Target { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnOpen { get; set; }
+
+    private bool _open, _justOpened;
+    private double _x, _y;
+    private ElementReference _menu;
+
+    private bool _isContext => Trigger == "contextmenu";
+    private string PosStyle =>
+        $"left:{_x.ToString("0", CultureInfo.InvariantCulture)}px;top:{_y.ToString("0", CultureInfo.InvariantCulture)}px";
+
+    private Task OnContext(MouseEventArgs e) => _isContext ? OpenAt(e) : Task.CompletedTask;
+    private Task OnAnchorClick(MouseEventArgs e) => !_isContext ? OpenAt(e) : Task.CompletedTask;
+
+    private async Task OpenAt(MouseEventArgs e)
+    {
+        _x = e.ClientX; _y = e.ClientY;
+        _open = true; _justOpened = true;
+        await OnOpen.InvokeAsync();
+        StateHasChanged();
+    }
+
+    public async Task CloseAsync()
+    {
+        if (!_open) return;
+        _open = false;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await CloseAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_justOpened)
+        {
+            _justOpened = false;
+            try { await _menu.FocusAsync(); } catch { }
+        }
+    }
+}

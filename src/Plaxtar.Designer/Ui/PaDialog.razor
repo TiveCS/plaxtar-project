@@ -1,0 +1,54 @@
+@* Confirm/cancel dialog on top of PaModal. Two ways to use:
+   - Imperative: `var ok = await dlg.ConfirmAsync("Delete screen?", "…");` (great for deletes)
+   - Declarative: bind Open + set Title/Message + handle OnConfirm.
+   Returns the user's choice as a bool via the awaited task. *@
+@namespace Plaxtar.Designer.Ui
+
+<PaModal Open="_open" OpenChanged="OnOpenChanged" Title="@_title">
+    <ChildContent>
+        <p class="pa-dlg-msg">@_message</p>
+    </ChildContent>
+    <Footer>
+        <div class="pa-dlg-actions">
+            <PaButton Variant="PaButton.Kind.Ghost" OnClick="Cancel">@_cancel</PaButton>
+            <PaButton Variant="_danger ? PaButton.Kind.Danger : PaButton.Kind.Primary" OnClick="Confirm">@_confirm</PaButton>
+        </div>
+    </Footer>
+</PaModal>
+
+@code {
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private bool _open, _danger = true;
+    private string? _title, _message;
+    private string _confirm = "Delete", _cancel = "Cancel";
+    private TaskCompletionSource<bool>? _tcs;
+
+    public Task<bool> ConfirmAsync(string title, string message,
+        string confirm = "Delete", string cancel = "Cancel", bool danger = true)
+    {
+        _title = title; _message = message; _confirm = confirm; _cancel = cancel; _danger = danger;
+        _tcs = new TaskCompletionSource<bool>();
+        _open = true;
+        StateHasChanged();
+        return _tcs.Task;
+    }
+
+    private async Task Confirm()
+    {
+        _open = false;
+        _tcs?.TrySetResult(true);
+        await OnConfirm.InvokeAsync();
+    }
+
+    private void Cancel()
+    {
+        _open = false;
+        _tcs?.TrySetResult(false);
+    }
+
+    private void OnOpenChanged(bool v)
+    {
+        if (!v) { _open = false; _tcs?.TrySetResult(false); }
+    }
+}

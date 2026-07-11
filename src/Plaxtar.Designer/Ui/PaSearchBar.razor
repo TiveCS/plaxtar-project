@@ -1,0 +1,24 @@
+@* Search/filter input: icon + text + clear. Two-way via @bind-Value. Used in the
+   Components panel filter, the Insert flyout, and inside PaCombobox. *@
+@namespace Plaxtar.Designer.Ui
+
+<div class="pa-search">
+    <span class="pa-search-i" aria-hidden="true">&#128269;</span>
+    <input class="pa-search-in" type="text" placeholder="@Placeholder"
+           value="@Value" @oninput="OnInput" @ref="Input" />
+    @if (!string.IsNullOrEmpty(Value))
+    {
+        <button type="button" class="pa-search-x" title="clear" @onclick="Clear">&#10005;</button>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string? Placeholder { get; set; } = "Search…";
+
+    public ElementReference Input { get; private set; }
+
+    private async Task OnInput(ChangeEventArgs e) => await ValueChanged.InvokeAsync(e.Value?.ToString() ?? "");
+    private async Task Clear() => await ValueChanged.InvokeAsync("");
+}

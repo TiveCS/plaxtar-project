@@ -1,0 +1,25 @@
+.pa-btn {
+    font: inherit;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    user-select: none;
+}
+
+.pa-btn:disabled { opacity: .5; cursor: default; }
+
+.pa-primary { background: #4f46e5; color: #fff; }
+.pa-primary:hover:not(:disabled) { background: #4338ca; }
+
+.pa-ghost { background: #fff; color: #1f2937; border-color: #d1d5db; }
+.pa-ghost:hover:not(:disabled) { background: #f3f4f6; }
+
+.pa-danger { background: #fff; color: #b91c1c; border-color: #fecaca; }
+.pa-danger:hover:not(:disabled) { background: #fef2f2; }
+
+.pa-icon { padding: 7px; }

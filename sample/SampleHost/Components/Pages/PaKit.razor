@@ -1,0 +1,103 @@
+@page "/pakit"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using Plaxtar.Designer.Ui
+
+@* Dev-only harness for the internal Pa* UI kit (issue #20). Exercises each component
+   interactively; data-testid hooks drive the headless smoke test. *@
+
+<PageTitle>Pa kit harness</PageTitle>
+
+<div style="max-width:720px;margin:24px auto;font-family:system-ui;display:flex;flex-direction:column;gap:22px">
+    <h2>Pa* kit harness</h2>
+
+    <section>
+        <h4>PaButton</h4>
+        <div style="display:flex;gap:8px;align-items:center">
+            <PaButton Variant="PaButton.Kind.Primary" OnClick="() => _clicks++">Primary</PaButton>
+            <PaButton Variant="PaButton.Kind.Ghost" OnClick="() => _clicks++">Ghost</PaButton>
+            <PaButton Variant="PaButton.Kind.Danger" OnClick="() => _clicks++">Danger</PaButton>
+            <span data-testid="btn-clicks">clicks:@_clicks</span>
+        </div>
+    </section>
+
+    <section>
+        <h4>PaIconButton + PaTooltip</h4>
+        <PaTooltip Text="Layers" Side="bottom">
+            <PaIconButton Title="Layers" Active="true" OnClick="() => _clicks++">&#9776;</PaIconButton>
+        </PaTooltip>
+    </section>
+
+    <section>
+        <h4>PaSearchBar</h4>
+        <PaSearchBar @bind-Value="_q" Placeholder="Filter…" />
+        <div data-testid="search-val">q:@_q</div>
+    </section>
+
+    <section>
+        <h4>PaCombobox</h4>
+        <PaCombobox Items="_screens" Selected="_screen"
+                    SelectedChanged="v => _screen = v"
+                    OnDelete="v => _screens.Remove(v)"
+                    Placeholder="Pick screen…">
+            <Footer>
+                <PaButton Variant="PaButton.Kind.Primary" OnClick="AddScreen">+ New screen</PaButton>
+            </Footer>
+        </PaCombobox>
+        <div data-testid="cb-val">screen:@_screen</div>
+    </section>
+
+    <section>
+        <h4>PaMenu (anchor)</h4>
+        <PaMenu Trigger="anchor">
+            <Target><PaButton>Open menu &#9662;</PaButton></Target>
+            <ChildContent>
+                <PaMenuItem Icon="+" OnClick='() => _menuPick = "insert"'>Insert</PaMenuItem>
+                <PaMenuItem Icon="&#9112;" OnClick='() => _menuPick = "duplicate"'>Duplicate</PaMenuItem>
+                <PaMenuItem Icon="&#10005;" Danger="true" OnClick='() => _menuPick = "delete"'>Delete</PaMenuItem>
+            </ChildContent>
+        </PaMenu>
+        <div data-testid="menu-pick">pick:@_menuPick</div>
+    </section>
+
+    <section>
+        <h4>PaMenu (right-click)</h4>
+        <PaMenu Trigger="contextmenu">
+            <Target>
+                <div data-testid="ctx-target" style="padding:16px;border:1px dashed #cbd5e1;border-radius:8px">
+                    Right-click me
+                </div>
+            </Target>
+            <ChildContent>
+                <PaMenuItem OnClick='() => _menuPick = "ctx-add"'>Add as overlay</PaMenuItem>
+            </ChildContent>
+        </PaMenu>
+    </section>
+
+    <section>
+        <h4>PaDialog (imperative confirm)</h4>
+        <PaButton Variant="PaButton.Kind.Danger" OnClick="AskDelete">Delete something…</PaButton>
+        <div data-testid="dlg-result">result:@_dlgResult</div>
+        <PaDialog @ref="_dialog" />
+    </section>
+</div>
+
+@code {
+    private int _clicks;
+    private string _q = "";
+    private string _menuPick = "-";
+    private string _dlgResult = "-";
+
+    private List<string> _screens = new() { "audit-log", "login", "register" };
+    private string? _screen = "audit-log";
+
+    private PaDialog? _dialog;
+
+    private void AddScreen() { _screens.Add($"screen-{_screens.Count + 1}"); }
+
+    private async Task AskDelete()
+    {
+        if (_dialog is null) return;
+        var ok = await _dialog.ConfirmAsync("Delete screen?", "This removes the screen and its states.");
+        _dlgResult = ok ? "confirmed" : "cancelled";
+    }
+}

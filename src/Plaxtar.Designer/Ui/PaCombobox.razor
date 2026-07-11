@@ -1,0 +1,60 @@
+@* Searchable select (shadcn-combobox). Trigger shows the selection; the popover holds
+   a PaSearchBar filter + option rows (optional per-row delete) + an optional Footer
+   (e.g. a "+ New…" inline input). Used for the screen/state selectors (issue #21). *@
+@namespace Plaxtar.Designer.Ui
+
+<PaPopover @ref="_pop" Align="@Align">
+    <Trigger>
+        <button type="button" class="pa-cb-trigger">
+            <span class="pa-cb-val@(Selected is null ? " pa-ph" : "")">@(Selected ?? Placeholder)</span>
+            <span class="pa-cb-caret" aria-hidden="true">&#9662;</span>
+        </button>
+    </Trigger>
+    <Body>
+        <div class="pa-cb-body">
+            <div class="pa-cb-search"><PaSearchBar @bind-Value="_q" Placeholder="@SearchPlaceholder" /></div>
+            <div class="pa-cb-list">
+                @foreach (var it in Filtered)
+                {
+                    <div class="pa-cb-row@(it == Selected ? " pa-sel" : "")">
+                        <button type="button" class="pa-cb-pick" @onclick="() => Pick(it)">@it</button>
+                        @if (OnDelete.HasDelegate)
+                        {
+                            <button type="button" class="pa-cb-del" title="delete" @onclick="() => OnDelete.InvokeAsync(it)">&#10005;</button>
+                        }
+                    </div>
+                }
+                @if (!Filtered.Any()) { <div class="pa-cb-empty">No matches</div> }
+            </div>
+            @if (Footer is not null) { <div class="pa-cb-footer">@Footer</div> }
+        </div>
+    </Body>
+</PaPopover>
+
+@code {
+    [Parameter] public IEnumerable<string> Items { get; set; } = Array.Empty<string>();
+    [Parameter] public string? Selected { get; set; }
+    [Parameter] public EventCallback<string> SelectedChanged { get; set; }
+    [Parameter] public EventCallback<string> OnDelete { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public string? Placeholder { get; set; } = "Select…";
+    [Parameter] public string? SearchPlaceholder { get; set; } = "Search…";
+    [Parameter] public string Align { get; set; } = "start";
+
+    private PaPopover? _pop;
+    private string _q = "";
+
+    private IEnumerable<string> Filtered =>
+        string.IsNullOrWhiteSpace(_q)
+            ? Items
+            : Items.Where(i => i.Contains(_q, StringComparison.OrdinalIgnoreCase));
+
+    private async Task Pick(string v)
+    {
+        _q = "";
+        if (_pop is not null) await _pop.CloseAsync();
+        await SelectedChanged.InvokeAsync(v);
+    }
+
+    public Task CloseAsync() => _pop?.CloseAsync() ?? Task.CompletedTask;
+}

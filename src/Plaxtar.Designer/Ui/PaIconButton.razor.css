@@ -1,0 +1,19 @@
+.pa-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.pa-iconbtn:hover:not(:disabled) { background: #f0f1f4; color: #1f2937; }
+.pa-iconbtn.pa-on { background: #eef2ff; color: #4f46e5; }
+.pa-iconbtn:disabled { opacity: .45; cursor: default; }

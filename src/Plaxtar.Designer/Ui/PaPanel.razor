@@ -1,0 +1,17 @@
+@* Floating panel chrome: header (title + actions) over a scrolling body. Used for the
+   rail's Layers/Components/Elements panels and the Properties pane (issue #21). *@
+@namespace Plaxtar.Designer.Ui
+
+<div class="pa-panel">
+    <div class="pa-panel-h">
+        <span class="pa-panel-t">@Title</span>
+        @if (HeaderActions is not null) { <span class="pa-panel-a">@HeaderActions</span> }
+    </div>
+    <div class="pa-panel-b">@ChildContent</div>
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
