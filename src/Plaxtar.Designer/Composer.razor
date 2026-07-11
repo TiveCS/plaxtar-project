@@ -109,14 +109,20 @@
         <!-- canvas -->
         <div class="pane canvas" @onclick="() => Session.Select(null)">
             <LayoutView Layout="_shellType">
-                @(_preview ? RenderRaw(Session.Root) : RenderNode(Session.Root))
+                @* @if/else (not a ternary) so toggling rebuilds the subtree cleanly
+                   instead of diffing the wrapped Edit tree against the raw Preview tree. *@
+                @if (_preview) { @RenderRaw(Session.Root) }
+                else { @RenderNode(Session.Root) }
             </LayoutView>
             @if (Session.Overlays.Count > 0)
             {
                 <div class="ov-layer">
                     @foreach (var ov in Session.Overlays)
                     {
-                        <div class="ov-item">@(_preview ? RenderRaw(ov) : RenderNode(ov))</div>
+                        <div class="ov-item">
+                            @if (_preview) { @RenderRaw(ov) }
+                            else { @RenderNode(ov) }
+                        </div>
                     }
                 </div>
             }
@@ -558,7 +564,8 @@
             }
             else
             {
-                foreach (var child in node.Children) builder.AddContent(13, RenderNode(child));
+                var seq = 13;
+                foreach (var child in node.Children) builder.AddContent(seq++, RenderNode(child));
             }
             builder.CloseElement();
         }
@@ -584,7 +591,8 @@
             builder.OpenElement(0, node.Element!);
             if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(1, "class", node.CssClass);
             if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(2, "style", css);
-            foreach (var child in node.Children) builder.AddContent(3, RenderRaw(child));
+            var seq = 3;
+            foreach (var child in node.Children) builder.AddContent(seq++, RenderRaw(child));
             builder.CloseElement();
         }
         else
@@ -636,7 +644,8 @@
 
     private RenderFragment RawFrag(List<EditableNode> kids) => b =>
     {
-        foreach (var child in kids) b.AddContent(0, RenderRaw(child));
+        var seq = 0;
+        foreach (var child in kids) b.AddContent(seq++, RenderRaw(child));
     };
 
     private readonly Dictionary<string, object?> _ephemeral = new();
@@ -647,7 +656,8 @@
 
     private RenderFragment Frag(List<EditableNode> kids) => b =>
     {
-        foreach (var child in kids) b.AddContent(0, RenderNode(child));
+        var seq = 0;
+        foreach (var child in kids) b.AddContent(seq++, RenderNode(child));
     };
 
     private RenderFragment EmptyFrag(string text) => b =>
