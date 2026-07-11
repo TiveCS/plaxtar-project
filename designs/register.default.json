@@ -1,0 +1,58 @@
+{
+  "schema": "plaxtar.designer/v1",
+  "screen": "register",
+  "state": "default",
+  "fe": "SampleHost",
+  "shell": "SampleLayout",
+  "root": {
+    "element": "div",
+    "children": [
+      {
+        "component": "Card",
+        "src": "Components/SampleUi/Card.razor",
+        "children": [
+          {
+            "component": "Stack",
+            "src": "Components/SampleUi/Stack.razor",
+            "params": {
+              "Gap": 14
+            },
+            "children": [
+              {
+                "component": "TextField",
+                "src": "Components/SampleUi/TextField.razor",
+                "params": {
+                  "Label": "Email",
+                  "Placeholder": "johndoe@gmail.com"
+                }
+              },
+              {
+                "component": "TextField",
+                "src": "Components/SampleUi/TextField.razor",
+                "params": {
+                  "Label": "Password",
+                  "Placeholder": "*********"
+                }
+              },
+              {
+                "component": "Button",
+                "src": "Components/SampleUi/Button.razor"
+              }
+            ]
+          }
+        ],
+        "slots": {
+          "HeaderContent": [
+            {
+              "component": "Badge",
+              "src": "Components/SampleUi/Badge.razor",
+              "params": {
+                "Text": "Login Page"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

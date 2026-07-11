@@ -167,6 +167,60 @@ public sealed class DesignSession
         Notify();
     }
 
+    // --- Drag & drop (#14) ---------------------------------------------------
+
+    // Drop a NEW node (from the Catalog/Elements) relative to a target: into the
+    // target if it's a container, else as the next sibling after it, else at root.
+    public void DropNew(string? targetId, EditableNode node)
+    {
+        var target = targetId is null ? null : FindAny(targetId);
+        if (target is not null && CanContainNode(target))
+            target.Children.Add(node);
+        else if (target is not null && ListOf(target) is { } list)
+            list.Insert(list.IndexOf(target) + 1, node);
+        else
+            Root.Children.Add(node);
+        SelectedId = node.Id;
+        ActiveSlot = null;
+        Notify();
+    }
+
+    public void DropComponent(string? targetId, string component) =>
+        DropNew(targetId, new EditableNode { Component = component, Src = Info(component)?.Src });
+    public void DropElement(string? targetId, string tag) =>
+        DropNew(targetId, new EditableNode { Element = tag });
+
+    // Move an EXISTING node relative to a target: into it if a container, else as the
+    // target's next sibling. No-op if dropping a node into its own subtree.
+    public void MoveNode(string dragId, string? targetId)
+    {
+        var drag = FindAny(dragId);
+        if (drag is null) return;
+
+        var target = targetId is null ? null : FindAny(targetId);
+        if (target is not null && IsSelfOrDescendant(drag, target)) return;
+
+        ListOf(drag)?.Remove(drag);
+        if (target is null)
+            Root.Children.Add(drag);
+        else if (CanContainNode(target))
+            target.Children.Add(drag);
+        else if (ListOf(target) is { } list)
+            list.Insert(list.IndexOf(target) + 1, drag);
+        else
+            Root.Children.Add(drag);
+
+        SelectedId = dragId;
+        Notify();
+    }
+
+    // The list (default Children, a named slot, or the overlays root) directly holding n.
+    private List<EditableNode>? ListOf(EditableNode n) =>
+        Overlays.Contains(n) ? Overlays : ContainingListAny(n);
+
+    private static bool IsSelfOrDescendant(EditableNode ancestor, EditableNode node) =>
+        ancestor == node || ancestor.AllChildren.Any(c => IsSelfOrDescendant(c, node));
+
     public void SetParam(string id, string name, object? value)
     {
         var node = FindAny(id);

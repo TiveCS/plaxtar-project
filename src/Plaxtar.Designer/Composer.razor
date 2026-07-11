@@ -66,7 +66,8 @@
             @foreach (var c in Catalog.Components)
             {
                 <div class="pcat">
-                    <button class="pitem" @onclick="() => Session.Add(c.Name)">
+                    <button class="pitem" draggable="true" @ondragstart="() => BeginDragCatalog(c.Name)"
+                            @onclick="() => Session.Add(c.Name)">
                         @c.Name
                         @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
                     </button>
@@ -75,8 +76,10 @@
             }
 
             <div class="ph">Elements</div>
-            <button class="pitem" @onclick='() => Session.AddElement("div")'>&lt;div&gt; <span class="cc">container</span></button>
-            <button class="pitem" @onclick='() => Session.AddElement("section")'>&lt;section&gt; <span class="cc">container</span></button>
+            <button class="pitem" draggable="true" @ondragstart='() => BeginDragElement("div")'
+                    @onclick='() => Session.AddElement("div")'>&lt;div&gt; <span class="cc">container</span></button>
+            <button class="pitem" draggable="true" @ondragstart='() => BeginDragElement("section")'
+                    @onclick='() => Session.AddElement("section")'>&lt;section&gt; <span class="cc">container</span></button>
 
             <div class="ph layers-h">Layers</div>
             @foreach (var (node, depth) in Flatten(Session.Root, 0))
@@ -107,7 +110,8 @@
         </div>
 
         <!-- canvas -->
-        <div class="pane canvas" @onclick="() => Session.Select(null)">
+        <div class="pane canvas" @onclick="() => Session.Select(null)"
+             @ondragover:preventDefault="true" @ondrop="() => DropOn(null)">
             <LayoutView Layout="_shellType">
                 @* @if/else (not a ternary) so each mode is its own sequence region. *@
                 @if (_preview) { @RenderRaw(Session.Root) }
@@ -369,7 +373,9 @@
 </div>
 
 <style>
-    .composer { font-family: system-ui, sans-serif; }
+    /* Full-bleed: own the viewport so the host's body margin / padding never insets
+       the design surface (Preview must match the real app's edge-to-edge width). */
+    .composer { position: fixed; inset: 0; background: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; z-index: 1; }
     .bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #e2e5ec; background: #fff; }
     .bar .scr { font-family: ui-monospace, monospace; font-size: 13px; }
     .bar .st { color: #8a8f9c; }
@@ -378,7 +384,7 @@
     .btn { font: inherit; font-size: 13px; font-weight: 550; padding: 6px 14px; border-radius: 7px; border: 1px solid #5b6cf0; background: #5b6cf0; color: #fff; cursor: pointer; }
     .btn2 { font: inherit; font-size: 13px; font-weight: 550; padding: 6px 12px; border-radius: 7px; border: 1px solid #d5d9e2; background: #fff; color: #565a66; cursor: pointer; }
     .btn2.on { border-color: #5b6cf0; background: #eaecfd; color: #4550c8; }
-    .split { display: grid; grid-template-columns: 180px 1fr 240px; height: calc(100vh - 46px); }
+    .split { display: grid; grid-template-columns: 180px 1fr 240px; flex: 1; min-height: 0; }
     /* Preview: single column so the (only visible) canvas gets full width.
        display:none removes palette/props from the grid, so the canvas auto-places
        into column 1 — which must be 1fr, not 0, or it collapses to zero width. */
@@ -435,6 +441,7 @@
     .pd-node { position: relative; outline: 1px dashed transparent; border-radius: 4px; }
     .pd-node:hover { outline-color: #b9c0f5; }
     .pd-node.pd-sel { outline: 2px solid #5b6cf0; }
+    .pitem[draggable=true] { cursor: grab; }
     .pd-empty { display: block; padding: 12px; font: 11px ui-monospace, monospace; color: #a0a4ad; border: 1px dashed #cfd4de; border-radius: 6px; text-align: center; }
     .pd-node > .pd-tag { position: absolute; top: -8px; left: 6px; font: 10px ui-monospace, monospace; background: #5b6cf0; color: #fff; padding: 1px 5px; border-radius: 4px; opacity: 0; pointer-events: none; z-index: 2; }
     .pd-node:hover > .pd-tag, .pd-node.pd-sel > .pd-tag { opacity: 1; }
@@ -536,6 +543,25 @@
         StateHasChanged();
     }
 
+    // --- Drag & drop (#14). All handlers are page-bound (see the interactivity note
+    // above): child-component @onclick/@ondrop don't become interactive under this
+    // page's render mode, so the canvas + its drag targets are authored by the page. ---
+    private string? _dragNodeId;      // dragging an existing node (reorder/move)
+    private string? _dragComponent;   // dragging a new component from the Catalog
+    private string? _dragElement;     // dragging a new raw element
+
+    private void BeginDragNode(string id) { _dragNodeId = id; _dragComponent = null; _dragElement = null; }
+    private void BeginDragCatalog(string name) { _dragComponent = name; _dragNodeId = null; _dragElement = null; }
+    private void BeginDragElement(string tag) { _dragElement = tag; _dragNodeId = null; _dragComponent = null; }
+
+    private void DropOn(string? targetId)
+    {
+        if (_dragComponent is { } c) Session.DropComponent(targetId, c);
+        else if (_dragElement is { } e) Session.DropElement(targetId, e);
+        else if (_dragNodeId is { } n) Session.MoveNode(n, targetId);
+        _dragNodeId = _dragComponent = _dragElement = null;
+    }
+
     // Canvas tree rendered inline by the page so click handlers are page-bound
     // (interactive), not authored inside a child component (which isn't).
     private RenderFragment RenderNode(EditableNode node) => builder =>
@@ -546,27 +572,36 @@
         builder.AddAttribute(1, "class", "pd-node" + (selected ? " pd-sel" : ""));
         builder.AddAttribute(2, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, () => Session.Select(node.Id)));
         builder.AddEventStopPropagationAttribute(3, "onclick", true);
+        // Drag & drop (#14), page-bound so the handlers are interactive. ondragover is
+        // preventDefault-only (no handler) to allow the drop without spamming the circuit
+        // with a render per mousemove.
+        builder.AddAttribute(4, "draggable", "true");
+        builder.AddAttribute(5, "ondragstart", EventCallback.Factory.Create<DragEventArgs>(this, () => BeginDragNode(node.Id)));
+        builder.AddEventStopPropagationAttribute(6, "ondragstart", true);
+        builder.AddEventPreventDefaultAttribute(7, "ondragover", true);
+        builder.AddAttribute(8, "ondrop", EventCallback.Factory.Create<DragEventArgs>(this, () => DropOn(node.Id)));
+        builder.AddEventStopPropagationAttribute(9, "ondrop", true);
 
-        builder.OpenElement(4, "span");
-        builder.AddAttribute(5, "class", "pd-tag");
-        builder.AddContent(6, node.DisplayName);
+        builder.OpenElement(11, "span");
+        builder.AddAttribute(12, "class", "pd-tag");
+        builder.AddContent(13, node.DisplayName);
         builder.CloseElement();
 
         if (node.IsElement)
         {
-            builder.OpenElement(7, node.Element!);
-            if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(8, "class", node.CssClass);
-            if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(9, "style", css);
+            builder.OpenElement(14, node.Element!);
+            if (!string.IsNullOrWhiteSpace(node.CssClass)) builder.AddAttribute(15, "class", node.CssClass);
+            if (LayoutCss.Combine(node.Layout, node.Style) is { } css) builder.AddAttribute(16, "style", css);
             if (node.Children.Count == 0)
             {
-                builder.OpenElement(10, "span");
-                builder.AddAttribute(11, "class", "pd-empty");
-                builder.AddContent(12, $"empty <{node.Element}> — add into it");
+                builder.OpenElement(17, "span");
+                builder.AddAttribute(18, "class", "pd-empty");
+                builder.AddContent(19, $"empty <{node.Element}> — drop or add into it");
                 builder.CloseElement();
             }
             else
             {
-                var seq = 13;
+                var seq = 20;
                 foreach (var child in node.Children) builder.AddContent(seq++, RenderNode(child));
             }
             builder.CloseElement();
@@ -574,9 +609,9 @@
         else
         {
             var type = Resolver.Resolve(node.Component!);
-            builder.OpenComponent<DynamicComponent>(14);
-            builder.AddComponentParameter(15, "Type", type);
-            builder.AddComponentParameter(16, "Parameters", BuildParams(node, type));
+            builder.OpenComponent<DynamicComponent>(40);
+            builder.AddComponentParameter(41, "Type", type);
+            builder.AddComponentParameter(42, "Parameters", BuildParams(node, type));
             builder.CloseComponent();
         }
 
