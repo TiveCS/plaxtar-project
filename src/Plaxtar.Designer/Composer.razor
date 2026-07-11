@@ -6,6 +6,7 @@
 @inject ScreenStore Store
 @inject PlaxtarDesignerOptions Options
 @inject IWebHostEnvironment Env
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Composer — @Session.Screen</PageTitle>
@@ -67,6 +68,9 @@
                             {
                                 <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
                                         style="padding-left:@(depth * 14 + 8)px"
+                                        draggable="true" data-node-id="@node.Id"
+                                        data-container="@(Session.CanContainNode(node) ? "true" : null)"
+                                        @ondragstart="() => BeginDragNode(node.Id)"
                                         @oncontextmenu:preventDefault="true" @oncontextmenu="e => OpenCtx(node.Id, e)"
                                         @onclick="() => Session.Select(node.Id)">
                                     <span class="lname">@node.DisplayName</span>
@@ -133,8 +137,7 @@
         }
 
         <!-- canvas (full width; panels float over it) -->
-        <div class="canvas" @onclick="() => Session.Select(null)"
-             @ondragover:preventDefault="true" @ondrop="() => DropOn(null)">
+        <div class="canvas" @onclick="() => Session.Select(null)">
             <LayoutView Layout="_shellType">
                 @* @if/else (not a ternary) so each mode is its own sequence region. *@
                 @if (_preview) { @RenderRaw(Session.Root) }
@@ -585,6 +588,10 @@
     .ctx-opt:hover { background: #f3f4f6; }
     .ctx-opt.mono { font-family: ui-monospace, monospace; font-size: 12px; color: #565a66; }
     .ctx-opt .cc { margin-left: auto; font-size: 9px; color: #5b6cf0; background: #eaecfd; padding: 1px 5px; border-radius: 4px; }
+
+    /* JS drag layer (#23): container highlighted for an "Into" drop. */
+    .pl-into { outline: 2px solid #5b6cf0 !important; outline-offset: -2px; background: rgba(91,108,240,.06); }
+    .lrow.pl-into { background: #eaecfd; }
 </style>
 
 @code {
@@ -816,13 +823,31 @@
         _newTag = "";
     }
 
-    private void DropOn(string? targetId)
+    // JS drag layer (#23, ADR 0007): the client module resolves the drop zone and
+    // calls OnDropAt once, on drop. The payload is the _drag* state set server-side by
+    // the existing @ondragstart handlers.
+    private DotNetObjectReference<Composer>? _dotnetRef;
+    private IJSObjectReference? _dragMod;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_dragText) Session.DropNew(targetId, new EditableNode { Text = "text" });
-        else if (_dragComponent is { } c) Session.DropComponent(targetId, c);
-        else if (_dragElement is { } e) Session.DropElement(targetId, e);
-        else if (_dragNodeId is { } n) Session.MoveNode(n, targetId);
+        if (!firstRender) return;
+        _dotnetRef = DotNetObjectReference.Create(this);
+        _dragMod = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Plaxtar.Designer/pl-drag.js");
+        await _dragMod.InvokeVoidAsync("init", _dotnetRef);
+    }
+
+    [JSInvokable]
+    public async Task OnDropAt(string? targetId, string pos)
+    {
+        var p = pos switch { "before" => DropPos.Before, "after" => DropPos.After, _ => DropPos.Into };
+        var tid = string.IsNullOrEmpty(targetId) ? null : targetId;
+        if (_dragText) Session.DropNewAt(tid, p, new EditableNode { Text = "text" });
+        else if (_dragComponent is { } c) Session.DropNewAt(tid, p, new EditableNode { Component = c, Src = Session.Info(c)?.Src });
+        else if (_dragElement is { } e) Session.DropNewAt(tid, p, new EditableNode { Element = e });
+        else if (_dragNodeId is { } n) Session.MoveNodeTo(n, tid, p);
         ClearDrag();
+        await InvokeAsync(StateHasChanged);
     }
 
     // Canvas tree rendered inline by the page so click handlers are page-bound
@@ -841,9 +866,10 @@
         builder.AddAttribute(4, "draggable", "true");
         builder.AddAttribute(5, "ondragstart", EventCallback.Factory.Create<DragEventArgs>(this, () => BeginDragNode(node.Id)));
         builder.AddEventStopPropagationAttribute(6, "ondragstart", true);
-        builder.AddEventPreventDefaultAttribute(7, "ondragover", true);
-        builder.AddAttribute(8, "ondrop", EventCallback.Factory.Create<DragEventArgs>(this, () => DropOn(node.Id)));
-        builder.AddEventStopPropagationAttribute(9, "ondrop", true);
+        // Hooks for the JS drag layer (#23): it resolves the zone + draws the line and
+        // calls OnDropAt on drop, so no server-side ondragover/ondrop here.
+        builder.AddAttribute(7, "data-node-id", node.Id);
+        if (Session.CanContainNode(node)) builder.AddAttribute(8, "data-container", "true");
         // Right-click context menu (#22). stopPropagation so only the deepest node
         // under the cursor opens the menu; preventDefault suppresses the native menu.
         builder.AddAttribute(10, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, e => OpenCtx(node.Id, e)));
@@ -1064,5 +1090,11 @@
              : s;
     }
 
-    public void Dispose() { Session.Changed -= OnChanged; CancelBarTimer(); }
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        CancelBarTimer();
+        _dotnetRef?.Dispose();
+        _ = _dragMod?.DisposeAsync().AsTask();
+    }
 }

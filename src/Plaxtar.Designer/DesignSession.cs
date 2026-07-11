@@ -2,6 +2,10 @@ using System.Text.Json;
 
 namespace Plaxtar.Designer;
 
+// Drop position relative to a target node (#23): a sibling before/after it, or a
+// first-class child (Into, containers only).
+public enum DropPos { Before, Into, After }
+
 // Scoped editing state for one open screen: the mutable tree, selection, and
 // mutations. Raises Changed so the canvas/props re-render. Loads from and saves
 // to the plaxtar.designer/v1 file format.
@@ -159,6 +163,53 @@ public sealed class DesignSession
         Overlays.Add(copy);
         SelectedId = copy.Id;
         ActiveSlot = null;
+        Notify();
+    }
+
+    // --- Positional drag/drop (#23, ADR 0007). Before/After = sibling of target;
+    // Into = first-class child of a container. The JS drag layer resolves the zone
+    // and calls one of these once, on drop. No schema change (only child order). ---
+
+    // Place `node` relative to `target` at `pos`. Null target = append to root.
+    private void PlaceAt(string? targetId, DropPos pos, EditableNode node)
+    {
+        var target = targetId is null ? null : FindAny(targetId);
+        if (target is null) { Root.Children.Add(node); }
+        else if (pos == DropPos.Into && CanContainNode(target)) { target.Children.Add(node); }
+        else
+        {
+            var list = ListOf(target) ?? Root.Children;
+            var idx = list.IndexOf(target);
+            if (idx < 0) list.Add(node);
+            else list.Insert(pos == DropPos.After ? idx + 1 : idx, node);
+        }
+        SelectedId = node.Id;
+        ActiveSlot = null;
+        Notify();
+    }
+
+    public void DropNewAt(string? targetId, DropPos pos, EditableNode node) => PlaceAt(targetId, pos, node);
+
+    // Move an existing node to (target, pos). No-op into its own subtree.
+    public void MoveNodeTo(string dragId, string? targetId, DropPos pos)
+    {
+        var drag = FindAny(dragId);
+        if (drag is null) return;
+        var target = targetId is null ? null : FindAny(targetId);
+        if (target is not null && IsSelfOrDescendant(drag, target)) return;
+
+        ListOf(drag)?.Remove(drag);   // detach first, then index the target's list
+
+        if (target is null) { Root.Children.Add(drag); }
+        else if (pos == DropPos.Into && CanContainNode(target)) { target.Children.Add(drag); }
+        else
+        {
+            var list = ListOf(target) ?? Root.Children;
+            var idx = list.IndexOf(target);
+            if (idx < 0) list.Add(drag);
+            else list.Insert(pos == DropPos.After ? idx + 1 : idx, drag);
+        }
+        SelectedId = drag.Id;
         Notify();
     }
 
