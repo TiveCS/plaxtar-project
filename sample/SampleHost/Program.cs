@@ -44,14 +44,14 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-var razorComponents = app.MapRazorComponents<App>()
+app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 #if PLAXTAR_DESIGNER
 if (app.Environment.IsDevelopment())
 {
-    // Register the Composer route + its @page for server-side endpoint discovery.
-    razorComponents.AddAdditionalAssemblies(typeof(Plaxtar.Designer.Composer).Assembly);
+    // The Composer's host page (Components/Pages/Designer.razor) lives in this app, so
+    // the router discovers it normally — no AddAdditionalAssemblies needed.
 
     // #4 dev endpoint: regenerate designs/_catalog.json headlessly (also usable by CI/agents).
     app.MapGet("/_catalog/export", async (ComponentCatalog cat, IWebHostEnvironment env) =>

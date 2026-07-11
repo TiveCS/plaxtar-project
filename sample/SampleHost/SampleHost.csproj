@@ -18,6 +18,7 @@
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">
     <Content Remove="Components\Pages\Catalog.razor" />
     <Content Remove="Components\Pages\Design.razor" />
+    <Content Remove="Components\Pages\Designer.razor" />
     <Content Remove="Components\Pages\PaKit.razor" />
   </ItemGroup>
 

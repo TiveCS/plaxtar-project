@@ -43,13 +43,14 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-var razorComponents = app.MapRazorComponents<App>()
+app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 #if PLAXTAR_DESIGNER
 if (app.Environment.IsDevelopment())
 {
-    razorComponents.AddAdditionalAssemblies(typeof(Plaxtar.Designer.Composer).Assembly);
+    // The Composer host page lives in this app (Components/Pages/Designer.razor), so the
+    // router discovers it normally — no AddAdditionalAssemblies needed.
 
     app.MapGet("/_catalog/export", async (ComponentCatalog cat, IWebHostEnvironment env) =>
     {

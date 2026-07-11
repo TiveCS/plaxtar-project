@@ -13,6 +13,11 @@
     <ProjectReference Include="..\..\src\Plaxtar.Designer\Plaxtar.Designer.csproj" />
   </ItemGroup>
 
+  <!-- The Composer host page consumes the dev-only package; drop it from Release. -->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Content Remove="Components\Pages\Designer.razor" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <DefineConstants>$(DefineConstants);PLAXTAR_DESIGNER</DefineConstants>
   </PropertyGroup>

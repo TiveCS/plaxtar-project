@@ -1,4 +1,6 @@
-@page "/designer"
+@* No @page: the Composer is a plain component so the consumer chooses its route by
+   hosting <Composer/> in their own dev-only page (see README). Keeps its own render
+   mode so it stays interactive regardless of the host page. *@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject DesignSession Session
 @inject ComponentCatalog Catalog

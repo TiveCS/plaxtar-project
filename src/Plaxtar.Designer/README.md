@@ -5,8 +5,8 @@ components into screens, render them live inside the real Shell, and export a
 codegen-grade Design Tree (`plaxtar.designer/v1`) that an AI agent turns into real
 `.razor` pages.
 
-It runs as a route (`/designer`) inside your own app, so it renders against your
-real DI, auth, and layout — no isolated canvas, no component redraw, no drift.
+It runs at a dev-only route **you choose** inside your own app, so it renders against
+your real DI, auth, and layout — no isolated canvas, no component redraw, no drift.
 
 ## Install (dev-only gating)
 
@@ -30,7 +30,7 @@ build contains no `Plaxtar.Designer` assembly and no `/designer` route.
 The `PLAXTAR_DESIGNER` constant lets the wiring below compile out in Release, where
 the package isn't referenced at all.
 
-### 2. Register + route the Composer, guarded
+### 2. Register the Composer's services, guarded
 
 ```csharp
 // Program.cs
@@ -51,43 +51,33 @@ if (builder.Environment.IsDevelopment())
     });
 }
 #endif
-
-var app = builder.Build();
-
-var razorComponents = app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
-
-#if PLAXTAR_DESIGNER
-if (app.Environment.IsDevelopment())
-    razorComponents.AddAdditionalAssemblies(typeof(Composer).Assembly);
-#endif
 ```
 
-> **Blazor Web App note:** server-side route discovery needs
-> `MapRazorComponents(...).AddAdditionalAssemblies(...)`. The `<Router>`'s
-> `AdditionalAssemblies` alone is not enough — the `/designer` endpoint 404s without it.
+No `AddAdditionalAssemblies` and no `<Router>` indirection: the Composer is a plain
+component, and *your own* host page (step 3) owns the route, so it's discovered like any
+other page in your app.
 
-### 3. (Optional) interactive router discovery
+### 3. Host the Composer at a route you choose
 
-For in-circuit navigation to `/designer`, add the assembly to the `<Router>` too —
-via an indirection so `Routes.razor` has no hard reference to the package in Release:
-
-```csharp
-// DesignerRouting.cs
-public static class DesignerRouting
-{
-    public static Assembly[] AdditionalAssemblies =>
-#if PLAXTAR_DESIGNER
-        new[] { typeof(Plaxtar.Designer.Composer).Assembly };
-#else
-        Array.Empty<Assembly>();
-#endif
-}
-```
+Add a dev-only page anywhere in your app — pick whatever path you like
+(`/designer`, `/_plaxtar/_designer`, `/admin/designer`, …). The Composer carries its own
+interactive render mode, so the page needs nothing else:
 
 ```razor
-<Router AppAssembly="typeof(Program).Assembly"
-        AdditionalAssemblies="MyApp.DesignerRouting.AdditionalAssemblies">
+@* Components/Pages/Designer.razor *@
+@page "/_plaxtar/_designer"
+@using Plaxtar.Designer
+
+<Composer />
+```
+
+Exclude that page from Release so no route ships (it references the dev-only package):
+
+```xml
+<!-- YourFrontend.csproj -->
+<ItemGroup Condition="'$(Configuration)' != 'Debug'">
+  <Content Remove="Components\Pages\Designer.razor" />
+</ItemGroup>
 ```
 
 ## Verify prod-safety

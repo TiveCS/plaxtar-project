@@ -1,0 +1,9 @@
+@page "/designer"
+@using Plaxtar.Designer
+
+@* Dev-only host page for the Composer. The package no longer owns a route — pick any
+   path here (e.g. "/_plaxtar/_designer"). The Composer carries its own render mode, so
+   this page needs nothing else. Compiled only in Debug (Content-removed from Release),
+   like the other Composer-consuming demo pages. *@
+
+<Composer />
