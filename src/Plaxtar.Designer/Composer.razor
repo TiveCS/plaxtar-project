@@ -40,6 +40,13 @@
                     </div>
                 </Footer>
             </PaCombobox>
+            <span class="topicons">
+                <PaTooltip Text="Layers" Side="bottom"><PaIconButton Title="Layers" Active="@(_panel == Panel.Layers)" OnClick="() => TogglePanel(Panel.Layers)">&#9776;</PaIconButton></PaTooltip>
+                <PaTooltip Text="Components" Side="bottom"><PaIconButton Title="Components" Active="@(_panel == Panel.Components)" OnClick="() => TogglePanel(Panel.Components)">&#9635;</PaIconButton></PaTooltip>
+                <PaTooltip Text="Elements" Side="bottom"><PaIconButton Title="Elements" Active="@(_panel == Panel.Elements)" OnClick="() => TogglePanel(Panel.Elements)">&#9671;</PaIconButton></PaTooltip>
+                <span class="topicons-sep"></span>
+                <PaTooltip Text="Properties" Side="bottom"><PaIconButton Title="Properties" Active="_propsOpen" OnClick="() => _propsOpen = !_propsOpen">&#9636;</PaIconButton></PaTooltip>
+            </span>
         }
         <span class="spacer"></span>
         @if (_saved is not null) { <span class="okmsg">saved → @_saved</span> }
@@ -48,16 +55,10 @@
     </div>
 
     <div class="stage">
-        @* Icon rail + one swappable floating panel (issue #21, ADR 0006). In Edit the
-           rail/panels/props float OVER a full-width canvas; Preview hides all chrome. *@
+        @* Panels float OVER a full-width canvas (ADR 0006). The toggle icons live in
+           the top bar (not a floating rail — that collided with the app Shell's nav). *@
         @if (!_preview)
         {
-            <div class="rail">
-                <PaTooltip Text="Layers"><PaIconButton Title="Layers" Active="@(_panel == Panel.Layers)" OnClick="() => TogglePanel(Panel.Layers)">&#9776;</PaIconButton></PaTooltip>
-                <PaTooltip Text="Components"><PaIconButton Title="Components" Active="@(_panel == Panel.Components)" OnClick="() => TogglePanel(Panel.Components)">&#9635;</PaIconButton></PaTooltip>
-                <PaTooltip Text="Elements"><PaIconButton Title="Elements" Active="@(_panel == Panel.Elements)" OnClick="() => TogglePanel(Panel.Elements)">&#9671;</PaIconButton></PaTooltip>
-            </div>
-
             @if (_panel != Panel.None)
             {
                 <div class="dock dock-left">
@@ -157,8 +158,8 @@
             }
         </div>
 
-        <!-- props (floating right dock) -->
-        @if (!_preview)
+        <!-- props (floating right dock; independent toggle) -->
+        @if (!_preview && _propsOpen)
         {
             <div class="dock dock-right">
                 <PaPanel Title="Properties">
@@ -502,6 +503,8 @@
     .is-preview .bar { position: absolute; top: 0; left: 0; right: 0; transition: transform .25s ease; box-shadow: 0 2px 10px rgba(17,24,39,.08); }
     .bar-hidden { transform: translateY(-100%); }
     .brand { font-weight: 700; color: #1f2430; margin-right: 4px; }
+    .topicons { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; }
+    .topicons-sep { width: 1px; height: 20px; background: #e2e5ec; margin: 0 4px; }
     .spacer { flex: 1; }
     .okmsg { font-size: 12px; color: #16884a; }
     .newrow { display: flex; gap: 6px; align-items: center; }
@@ -608,6 +611,7 @@
     // Preview top-bar auto-hide state, and the shared confirm dialog for deletes.
     private enum Panel { None, Layers, Components, Elements }
     private Panel _panel = Panel.Layers;
+    private bool _propsOpen = true;    // Properties is an independent right-panel toggle (#26)
     private string _catQ = "";
     private bool _barHidden;
     private PaDialog? _dialog;

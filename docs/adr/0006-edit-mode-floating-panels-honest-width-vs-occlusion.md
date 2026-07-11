@@ -38,3 +38,7 @@ Responsive/breakpoint fidelity remains out of scope (still an iframe follow-up, 
 - Design edges can sit behind panels. Editing an occluded node relies on collapse / Layers / context menu — these become load-bearing, not nice-to-haves.
 - A new interaction surface (canvas right-click context menu) must stay in sync with the same node operations as the panels (insert/delete/duplicate/overlay) and the codegen contract.
 - Preview gains an auto-hide timer + top-edge hover zone; the only way back to Edit while the bar is hidden is the hover reveal, so that hit zone must be reliable.
+
+### Update (panel-toggle rail relocated)
+
+The always-visible icon rail described above originally floated on the canvas — but the canvas renders the app's real Shell, whose own left nav the rail landed on top of. The rail's panel-toggle icons (Layers/Components/Elements/Properties) therefore moved into the **top bar** (a group next to the screen/state selectors); there is no floating rail on the canvas anymore. The **panels themselves still float** over the full-width canvas — the width-honesty decision above is unchanged. Layers/Components/Elements remain mutually exclusive (left); Properties is an independent toggle (right); both a left panel and Properties can be open at once. `Ctrl+B` hides/restores all panels for a full-canvas Edit view (distinct from Preview's raw render).
