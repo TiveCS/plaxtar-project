@@ -10,121 +10,129 @@
 
 <PageTitle>Composer — @Session.Screen</PageTitle>
 
-<div class="composer">
+<div class="composer@(_preview ? " is-preview" : "")">
     <!-- toolbar -->
-    <div class="bar">
-        <span class="scr">@Session.Screen<span class="st">.@Session.State</span></span>
+    <div class="bar@(_preview && _barHidden ? " bar-hidden" : "")"
+         @onmouseenter="ShowBar" @onmouseleave="HideBarSoon">
+        <span class="brand">Plaxtar</span>
+        @if (!_preview)
+        {
+            <PaCombobox Items="ScreenNames()" Selected="@Session.Screen"
+                        SelectedChanged="OnPickScreen" OnDelete="OnDeleteScreen"
+                        Placeholder="screen…" SearchPlaceholder="Search screens…">
+                <Footer>
+                    <div class="newrow">
+                        <input placeholder="new screen name" value="@_newName"
+                               @oninput="e => _newName = e.Value?.ToString() ?? string.Empty" />
+                        <PaButton Variant="PaButton.Kind.Primary" OnClick="NewScreen">+ New</PaButton>
+                    </div>
+                </Footer>
+            </PaCombobox>
+            <PaCombobox Items="StatesForCurrentScreen().ToList()" Selected="@Session.State"
+                        SelectedChanged="OnPickState" OnDelete="OnDeleteState"
+                        Placeholder="state…" SearchPlaceholder="Search states…">
+                <Footer>
+                    <div class="newrow">
+                        <input placeholder="new state (e.g. modal-open)" value="@_newState"
+                               @oninput="e => _newState = e.Value?.ToString() ?? string.Empty" />
+                        <PaButton Variant="PaButton.Kind.Primary" OnClick="AddState">+ New</PaButton>
+                    </div>
+                </Footer>
+            </PaCombobox>
+        }
         <span class="spacer"></span>
         @if (_saved is not null) { <span class="okmsg">saved → @_saved</span> }
-        <button class="btn2 @(_preview ? "on" : "")" @onclick="() => _preview = !_preview"
-                title="Preview = raw, full-width, true-fidelity render (non-interactive)">
-            @(_preview ? "✎ Edit" : "◱ Preview")
-        </button>
-        <button class="btn" @onclick="SaveAsync">Save</button>
+        <PaButton OnClick="TogglePreview" Title="Preview = raw, full-width, true-fidelity (non-interactive)">@(_preview ? "✎ Edit" : "◱ Preview")</PaButton>
+        <PaButton Variant="PaButton.Kind.Primary" OnClick="SaveAsync">Save</PaButton>
     </div>
 
-    <div class="split @(_preview ? "preview" : "")">
-        <!-- screens + palette + layers -->
-        <div class="pane palette">
-            <div class="ph">Screens</div>
-            @foreach (var s in _screens)
-            {
-                <div class="srow @(s.Screen == Session.Screen && s.State == Session.State ? "ssel" : "")">
-                    <button class="sopen" @onclick="() => LoadScreenAsync(s)">@s.Screen<span class="sst">.@s.State</span></button>
-                    <button class="sdel" title="delete" @onclick="() => DeleteScreenAsync(s)">✕</button>
-                </div>
-            }
-            <div class="newscreen">
-                <input placeholder="new screen name" value="@_newName"
-                       @oninput="e => _newName = e.Value?.ToString() ?? string.Empty" />
-                <button @onclick="NewScreen">+ New</button>
+    <div class="stage">
+        @* Icon rail + one swappable floating panel (issue #21, ADR 0006). In Edit the
+           rail/panels/props float OVER a full-width canvas; Preview hides all chrome. *@
+        @if (!_preview)
+        {
+            <div class="rail">
+                <PaTooltip Text="Layers"><PaIconButton Title="Layers" Active="@(_panel == Panel.Layers)" OnClick="() => TogglePanel(Panel.Layers)">&#9776;</PaIconButton></PaTooltip>
+                <PaTooltip Text="Components"><PaIconButton Title="Components" Active="@(_panel == Panel.Components)" OnClick="() => TogglePanel(Panel.Components)">&#9635;</PaIconButton></PaTooltip>
+                <PaTooltip Text="Elements"><PaIconButton Title="Elements" Active="@(_panel == Panel.Elements)" OnClick="() => TogglePanel(Panel.Elements)">&#9671;</PaIconButton></PaTooltip>
             </div>
 
-            <div class="ph">States</div>
-            <div class="statepick">
-                @foreach (var st in StatesForCurrentScreen())
-                {
-                    <button class="slotbtn @(st == Session.State ? "act" : "")"
-                            @onclick="() => SwitchStateAsync(st)">@st</button>
-                }
-            </div>
-            <div class="newscreen">
-                <input placeholder="new state (e.g. modal-open)" value="@_newState"
-                       @oninput="e => _newState = e.Value?.ToString() ?? string.Empty" />
-                <button @onclick="AddState">+ State</button>
-            </div>
-            @if (Session.State != "default")
+            @if (_panel != Panel.None)
             {
-                <div class="newscreen">
-                    <input placeholder="rename @Session.State" value="@_renameState"
-                           @oninput="e => _renameState = e.Value?.ToString() ?? string.Empty" />
-                    <button @onclick="() => RenameStateAsync(_renameState)">Rename</button>
+                <div class="dock dock-left">
+                    <PaPanel Title="@_panel.ToString()">
+                        @if (_panel == Panel.Layers)
+                        {
+                            @foreach (var (node, depth) in Flatten(Session.Root, 0))
+                            {
+                                <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
+                                        style="padding-left:@(depth * 14 + 8)px"
+                                        @onclick="() => Session.Select(node.Id)">
+                                    <span class="lname">@node.DisplayName</span>
+                                    @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
+                                </button>
+                            }
+                            @if (Session.Overlays.Count > 0)
+                            {
+                                <div class="ph layers-h">Overlays</div>
+                                @foreach (var ov in Session.Overlays)
+                                {
+                                    @foreach (var (node, depth) in Flatten(ov, 0))
+                                    {
+                                        <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
+                                                style="padding-left:@(depth * 14 + 8)px"
+                                                @onclick="() => Session.Select(node.Id)">
+                                            <span class="lname">@node.DisplayName</span>
+                                            @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
+                                        </button>
+                                    }
+                                }
+                            }
+                        }
+                        else if (_panel == Panel.Components)
+                        {
+                            <div class="pfilter"><PaSearchBar @bind-Value="_catQ" Placeholder="Filter components…" /></div>
+                            @foreach (var c in FilteredCatalog())
+                            {
+                                <div class="pcat">
+                                    <button class="pitem" draggable="true" @ondragstart="() => BeginDragCatalog(c.Name)"
+                                            @onclick="() => Session.Add(c.Name)">
+                                        @c.Name
+                                        @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
+                                    </button>
+                                    <button class="ovbtn" title="add as overlay" @onclick="() => Session.AddOverlay(c.Name)">&#10697;</button>
+                                </div>
+                            }
+                            @if (!FilteredCatalog().Any()) { <p class="muted">No components match.</p> }
+                        }
+                        else
+                        {
+                            <button class="pitem" draggable="true" @ondragstart="() => BeginDragText()"
+                                    @onclick="() => Session.AddText()">&#8220;Text&#8221; <span class="cc">text</span></button>
+                            <div class="newrow">
+                                <input placeholder="any tag (e.g. table)" value="@_newTag"
+                                       @oninput="e => _newTag = e.Value?.ToString() ?? string.Empty" />
+                                <PaButton Variant="PaButton.Kind.Primary" OnClick="AddFreeTag">+ Tag</PaButton>
+                            </div>
+                            @foreach (var (group, tags) in HtmlTags.Palette)
+                            {
+                                <div class="egroup">
+                                    <span class="eglabel">@group</span>
+                                    @foreach (var t in tags)
+                                    {
+                                        <button class="etag" draggable="true" @ondragstart="() => BeginDragElement(t)"
+                                                @onclick="() => Session.AddElement(t)">@t</button>
+                                    }
+                                </div>
+                            }
+                        }
+                    </PaPanel>
                 </div>
             }
+        }
 
-            <div class="ph">Catalog</div>
-            @foreach (var c in Catalog.Components)
-            {
-                <div class="pcat">
-                    <button class="pitem" draggable="true" @ondragstart="() => BeginDragCatalog(c.Name)"
-                            @onclick="() => Session.Add(c.Name)">
-                        @c.Name
-                        @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
-                    </button>
-                    <button class="ovbtn" title="add as overlay" @onclick="() => Session.AddOverlay(c.Name)">⧉</button>
-                </div>
-            }
-
-            <div class="ph">Elements</div>
-            <button class="pitem" draggable="true" @ondragstart="() => BeginDragText()"
-                    @onclick="() => Session.AddText()">“Text” <span class="cc">text</span></button>
-            <div class="newscreen">
-                <input placeholder="any tag (e.g. table)" value="@_newTag"
-                       @oninput="e => _newTag = e.Value?.ToString() ?? string.Empty" />
-                <button @onclick="AddFreeTag">+ Tag</button>
-            </div>
-            @foreach (var (group, tags) in HtmlTags.Palette)
-            {
-                <div class="egroup">
-                    <span class="eglabel">@group</span>
-                    @foreach (var t in tags)
-                    {
-                        <button class="etag" draggable="true" @ondragstart="() => BeginDragElement(t)"
-                                @onclick="() => Session.AddElement(t)">@t</button>
-                    }
-                </div>
-            }
-
-            <div class="ph layers-h">Layers</div>
-            @foreach (var (node, depth) in Flatten(Session.Root, 0))
-            {
-                <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
-                        style="padding-left:@(depth * 14 + 8)px"
-                        @onclick="() => Session.Select(node.Id)">
-                    <span class="lname">@node.DisplayName</span>
-                    @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
-                </button>
-            }
-            @if (Session.Overlays.Count > 0)
-            {
-                <div class="ph layers-h">Overlays</div>
-                @foreach (var ov in Session.Overlays)
-                {
-                    @foreach (var (node, depth) in Flatten(ov, 0))
-                    {
-                        <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
-                                style="padding-left:@(depth * 14 + 8)px"
-                                @onclick="() => Session.Select(node.Id)">
-                            <span class="lname">@node.DisplayName</span>
-                            @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
-                        </button>
-                    }
-                }
-            }
-        </div>
-
-        <!-- canvas -->
-        <div class="pane canvas" @onclick="() => Session.Select(null)"
+        <!-- canvas (full width; panels float over it) -->
+        <div class="canvas" @onclick="() => Session.Select(null)"
              @ondragover:preventDefault="true" @ondrop="() => DropOn(null)">
             <LayoutView Layout="_shellType">
                 @* @if/else (not a ternary) so each mode is its own sequence region. *@
@@ -145,9 +153,11 @@
             }
         </div>
 
-        <!-- props -->
-        <div class="pane props">
-            <div class="ph">Properties</div>
+        <!-- props (floating right dock) -->
+        @if (!_preview)
+        {
+            <div class="dock dock-right">
+                <PaPanel Title="Properties">
             @if (Session.Selected is { } sel)
             {
                 <div class="ptarget">
@@ -407,33 +417,45 @@
             }
             else
             {
-                <p class="muted">Click a component on the canvas. Click a Catalog item to add it into the selected container.</p>
+                <p class="muted">Click a node on the canvas or in Layers. Drag a Component/Element in to add it.</p>
             }
-        </div>
+                </PaPanel>
+            </div>
+        }
+
+        @* Preview: a top hover strip re-reveals the auto-hidden bar. *@
+        @if (_preview) { <div class="barzone" @onmouseenter="ShowBar"></div> }
     </div>
+
+    <PaDialog @ref="_dialog" />
 </div>
 
 <style>
     /* Full-bleed: own the viewport so the host's body margin / padding never insets
        the design surface (Preview must match the real app's edge-to-edge width). */
     .composer { position: fixed; inset: 0; background: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; z-index: 1; }
-    .bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #e2e5ec; background: #fff; }
-    .bar .scr { font-family: ui-monospace, monospace; font-size: 13px; }
-    .bar .st { color: #8a8f9c; }
+
+    /* Top bar. In Preview it floats over the canvas and auto-hides (ADR 0006). */
+    .bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #e2e5ec; background: #fff; z-index: 90; }
+    .is-preview .bar { position: absolute; top: 0; left: 0; right: 0; transition: transform .25s ease; box-shadow: 0 2px 10px rgba(17,24,39,.08); }
+    .bar-hidden { transform: translateY(-100%); }
+    .brand { font-weight: 700; color: #1f2430; margin-right: 4px; }
     .spacer { flex: 1; }
     .okmsg { font-size: 12px; color: #16884a; }
-    .btn { font: inherit; font-size: 13px; font-weight: 550; padding: 6px 14px; border-radius: 7px; border: 1px solid #5b6cf0; background: #5b6cf0; color: #fff; cursor: pointer; }
-    .btn2 { font: inherit; font-size: 13px; font-weight: 550; padding: 6px 12px; border-radius: 7px; border: 1px solid #d5d9e2; background: #fff; color: #565a66; cursor: pointer; }
-    .btn2.on { border-color: #5b6cf0; background: #eaecfd; color: #4550c8; }
-    .split { display: grid; grid-template-columns: 180px 1fr 240px; flex: 1; min-height: 0; }
-    /* Preview: single column so the (only visible) canvas gets full width.
-       display:none removes palette/props from the grid, so the canvas auto-places
-       into column 1 — which must be 1fr, not 0, or it collapses to zero width. */
-    .split.preview { grid-template-columns: 1fr; }
-    .split.preview .palette, .split.preview .props { display: none; }
-    .pane { overflow: auto; }
-    .palette { border-right: 1px solid #e2e5ec; background: #fafbfc; padding: 6px; }
-    .props { border-left: 1px solid #e2e5ec; background: #fff; padding: 6px 10px; }
+    .newrow { display: flex; gap: 6px; align-items: center; }
+    .newrow input { flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+
+    /* Stage: the canvas fills it at true full width; rail + docks float over it. */
+    .stage { position: relative; flex: 1; min-height: 0; }
+    .canvas { position: absolute; inset: 0; overflow: auto; background: #eef0f4; }
+    .barzone { position: absolute; top: 0; left: 0; right: 0; height: 10px; z-index: 85; }
+    .rail { position: absolute; top: 12px; left: 12px; z-index: 30; display: flex; flex-direction: column; gap: 4px; padding: 5px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 8px 24px rgba(17,24,39,.12); }
+    .dock { position: absolute; top: 12px; bottom: 12px; z-index: 25; display: flex; }
+    .dock > * { flex: 1; min-height: 0; }
+    .dock-left { left: 62px; width: 256px; }
+    .dock-right { right: 12px; width: 272px; }
+    .pfilter { padding: 2px 2px 8px; }
+
     .ph { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #8a8f9c; font-weight: 600; padding: 6px 4px; }
     .pitem { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; font: inherit; font-size: 13px; border: 0; background: transparent; padding: 7px 8px; border-radius: 6px; cursor: pointer; }
     .pitem:hover { background: #eef0f4; }
@@ -453,8 +475,7 @@
     .lrow:hover { background: #eef0f4; }
     .lrow.lsel { background: #eaecfd; color: #4550c8; }
     .lrow .lc { margin-left: auto; font-size: 9px; color: #8a8f9c; background: #eef0f4; padding: 0 5px; border-radius: 8px; }
-    .canvas { background: #eef0f4; position: relative; }
-    .statepick { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 4px 4px; }
+    .lname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pcat { display: flex; align-items: center; gap: 2px; }
     .pcat .pitem { flex: 1; }
     .ovbtn { font-size: 12px; border: 1px solid #e2e5ec; background: #fff; color: #8a8f9c; border-radius: 5px; width: 24px; height: 26px; cursor: pointer; }
@@ -507,7 +528,83 @@
     private List<ScreenRef> _screens = new();
     private string _newName = "";
     private string _newState = "";
-    private string _renameState = "";
+
+    // Shell redesign (#21): which rail panel is open (None = collapsed), catalog filter,
+    // Preview top-bar auto-hide state, and the shared confirm dialog for deletes.
+    private enum Panel { None, Layers, Components, Elements }
+    private Panel _panel = Panel.Layers;
+    private string _catQ = "";
+    private bool _barHidden;
+    private PaDialog? _dialog;
+    private CancellationTokenSource? _barCts;
+
+    private IEnumerable<string> ScreenNames() => _screens.Select(s => s.Screen).Distinct();
+
+    private IEnumerable<ComponentInfo> FilteredCatalog() =>
+        string.IsNullOrWhiteSpace(_catQ)
+            ? Catalog.Components
+            : Catalog.Components.Where(c => c.Name.Contains(_catQ, StringComparison.OrdinalIgnoreCase));
+
+    private void TogglePanel(Panel p) => _panel = _panel == p ? Panel.None : p;
+
+    private async Task OnPickScreen(string name)
+    {
+        var target = _screens.FirstOrDefault(s => s.Screen == name && s.State == "default")
+                     ?? _screens.FirstOrDefault(s => s.Screen == name);
+        if (target is not null) await LoadScreenAsync(target);
+    }
+
+    private Task OnPickState(string state) => SwitchStateAsync(state);
+
+    private async Task OnDeleteScreen(string name)
+    {
+        if (ScreenNames().Count() <= 1 || _dialog is null) return;   // keep at least one screen
+        if (!await _dialog.ConfirmAsync("Delete screen?", $"Delete “{name}” and all of its states?")) return;
+        foreach (var s in _screens.Where(s => s.Screen == name).ToList())
+            Store.Delete(_designsDir, s.FileBase);
+        RefreshScreens();
+        if (Session.Screen == name && _screens.FirstOrDefault() is { } first)
+            await LoadScreenAsync(first);
+    }
+
+    private async Task OnDeleteState(string state)
+    {
+        if (state == "default" || _dialog is null) return;           // default is the base state
+        if (!await _dialog.ConfirmAsync("Delete state?", $"Delete state “{state}” of {Session.Screen}?")) return;
+        Store.Delete(_designsDir, $"{Session.Screen}.{state}");
+        RefreshScreens();
+        if (Session.State == state) await SwitchStateAsync("default");
+    }
+
+    // Preview top-bar auto-hide (ADR 0006): hide after 3s idle, reveal on top-edge hover.
+    private void TogglePreview()
+    {
+        _preview = !_preview;
+        _barHidden = false;
+        if (_preview) HideBarSoon(); else CancelBarTimer();
+    }
+
+    private void ShowBar()
+    {
+        CancelBarTimer();
+        if (_barHidden) { _barHidden = false; StateHasChanged(); }
+    }
+
+    private void HideBarSoon()
+    {
+        if (!_preview) return;
+        CancelBarTimer();
+        _barCts = new CancellationTokenSource();
+        var tok = _barCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try { await Task.Delay(3000, tok); } catch { return; }
+            if (!tok.IsCancellationRequested)
+                await InvokeAsync(() => { _barHidden = true; StateHasChanged(); });
+        });
+    }
+
+    private void CancelBarTimer() { _barCts?.Cancel(); _barCts = null; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -563,26 +660,6 @@
         if (string.IsNullOrWhiteSpace(_newState)) return;
         Session.NewState(_newState.Trim());
         _newState = "";
-    }
-
-    // Rename the current (non-default) state: write the new file, drop the old one.
-    private async Task RenameStateAsync(string newName)
-    {
-        newName = newName?.Trim() ?? "";
-        if (string.IsNullOrWhiteSpace(newName) || newName == Session.State || Session.State == "default") return;
-        var old = Session.State;
-        Session.SetState(newName);
-        await Session.SaveAsync(_designsDir);
-        Store.Delete(_designsDir, $"{Session.Screen}.{old}");
-        RefreshScreens();
-        _renameState = "";
-        _saved = null;
-    }
-
-    private void DeleteScreenAsync(ScreenRef s)
-    {
-        Store.Delete(_designsDir, s.FileBase);
-        RefreshScreens();
     }
 
     private void OnChanged() { _saved = null; InvokeAsync(StateHasChanged); }
@@ -868,5 +945,5 @@
              : s;
     }
 
-    public void Dispose() => Session.Changed -= OnChanged;
+    public void Dispose() { Session.Changed -= OnChanged; CancelBarTimer(); }
 }
