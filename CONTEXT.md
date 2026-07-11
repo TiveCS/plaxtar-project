@@ -32,6 +32,10 @@ _Avoid_: layout (overloaded — reserve "layout" for CSS flow), frame, template
 Arranging components with real CSS primitives (flex, grid, width, `position: sticky/fixed/absolute`) via panel controls, exactly as real markup does. Opposite of pinning elements to raw x/y.
 _Avoid_: absolute canvas, freeform
 
+**Canvas**:
+The live render of the Screen being composed. Has two modes. **Edit mode** wraps every node in a selection box for click-select and shows the palette/props panels — so the content region is narrower and each node carries an extra wrapper element (cosmetic layout drift, accepted for editing). **Preview mode** is the *true-WYSIWYG* view: it collapses the panels to give the content region its real desktop width and renders the tree **raw** — no wrappers, no decorations — so the DOM (and thus flex/grid item identity, width resolution, media-query behaviour) is identical to the generated `.razor`. Preview is non-interactive for design-selection; the live components themselves still work.
+_Avoid_: viewport, artboard, stage. "Same as result" = Preview mode, not Edit mode.
+
 **Catalog**:
 The reflected list of available Components + their `[Parameter]` props + source `.razor` path, driving the props panel and giving the agent import info. **Scoped to the assemblies loaded in the running FE process** — i.e. `.Base.UI` (shared) + the module FE you run (e.g. `.UI.Audit`). Modules you don't run (`.UI.LMS`, `.UI.KMS`) are absent by design.
 _Avoid_: registry, palette

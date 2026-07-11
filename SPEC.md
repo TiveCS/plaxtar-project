@@ -92,6 +92,17 @@ Exports are files in the repo: git-versioned, work offline, decoupled from a run
 - **Source path:** resolve each component's `.razor` path (best-effort via type namespace → project layout convention, or an optional generated manifest at build time). Carried into the Catalog and JSON so the agent knows imports/where the component lives.
 - **Live:** composing mutates in-memory tree → re-render is immediate (Blazor state change). Editing component **markup/CSS** hot-reloads via `dotnet watch`. Editing component **structure** (`[Parameter]` signature, new component) needs rebuild (Catalog is reflected at load).
 
+### 4.1 Canvas modes: Edit vs Preview (see ADR 0005)
+
+The Canvas renders in two modes; **fidelity is defined by Preview, not Edit**. "Same as result" means Preview.
+
+- **Edit mode** (default): each node is wrapped in a `<div class="pd-node">` selection box (hover outline, node-type tag, click-select), and the palette/props side panels are shown. Consequence: the content region is narrower than production, and the wrapper element sits between a node and its parent — so in a flex/grid parent the *wrapper* is the flex/grid item, and `width:100%`/`flex:1`/`gap`/`:first-child` can resolve differently. This drift is **cosmetic and edit-only**; it never reaches the export or the generated `.razor`.
+- **Preview mode** (toggle): the side panels collapse (grid columns → `0 1fr 0`) so the content region gets its real desktop width, and the tree renders **raw** — no wrapper, no tag, no empty-slot placeholder, no selection `onclick`. The result is the exact DOM codegen would emit (same flex/grid item identity, same width resolution). The **Shell** (`LayoutView`) renders in both modes so `@Body` width matches production. Preview disables *design-selection* only; the live components themselves stay interactive.
+
+Implementation is a single `_preview` flag branching the canvas render — no schema or codegen change. The two render paths must stay in sync with the codegen contract (§7), or Preview stops being trustworthy.
+
+**Deferred — responsive/device fidelity:** media queries evaluate against the browser viewport, so Preview matches only the editor's own (desktop) width. Simulating breakpoint widths (1440/768/375) needs an **iframe** canvas that gives the design its own viewport; that is a separate, larger slice (a superset of Preview mode, not a reversal).
+
 ---
 
 ## 5. Layout model (see ADR 0002)
@@ -280,7 +291,7 @@ Plaxtar/                         (this repo)
 **MVP (build):**
 - In-process `/design` route, dev-only gated.
 - Catalog via reflection (params: primitives, enums, RenderFragment slots, EventCallback names).
-- Canvas: render Shell + Design Tree live via `DynamicComponent`; select/drag/drop into containers and slots.
+- Canvas: render Shell + Design Tree live via `DynamicComponent`; select/drag/drop into containers and slots; Edit/Preview toggle where Preview is the raw, full-width, true-fidelity view (§4.1).
 - Flow layout with panel-edited CSS incl. `position`.
 - Screens list (open/new/switch/rename/delete); States (default + modal/loading/empty).
 - Export Design Tree JSON (+ optional screenshot) to `designs/`.
@@ -291,6 +302,7 @@ Plaxtar/                         (this repo)
 - Multi-screen linked flows / routing between screens.
 - Templated `RenderFragment<T>` and complex-object param editors (beyond raw/bind).
 - MCP server entirely (files-only for a filesystem agent; add only for remote/sandboxed agents later).
+- Responsive/device-width preview (iframe canvas with breakpoint presets); Preview mode (§4.1) covers desktop-width fidelity only.
 - React support.
 
 ---
