@@ -1,0 +1,23 @@
+@namespace SampleHost.SampleUi
+
+<div class="modal">
+    <div class="modal-head">
+        <span class="modal-title">@Title</span>
+        <button class="modal-x" @onclick="OnClose">✕</button>
+    </div>
+    <div class="modal-body">@ChildContent</div>
+</div>
+
+<style>
+    .modal { background: #fff; border-radius: 12px; box-shadow: 0 20px 60px rgba(20,24,40,.35); min-width: 320px; overflow: hidden; font-family: system-ui, sans-serif; }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #eef0f4; }
+    .modal-title { font-weight: 600; font-size: 15px; }
+    .modal-x { border: 0; background: transparent; font-size: 15px; color: #8a8f9c; cursor: pointer; }
+    .modal-body { padding: 16px; }
+</style>
+
+@code {
+    [Parameter] public string? Title { get; set; }          // primitive
+    [Parameter] public EventCallback OnClose { get; set; }  // event
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

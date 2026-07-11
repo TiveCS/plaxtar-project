@@ -36,13 +36,38 @@
                 <button @onclick="NewScreen">+ New</button>
             </div>
 
+            <div class="ph">States</div>
+            <div class="statepick">
+                @foreach (var st in StatesForCurrentScreen())
+                {
+                    <button class="slotbtn @(st == Session.State ? "act" : "")"
+                            @onclick="() => SwitchStateAsync(st)">@st</button>
+                }
+            </div>
+            <div class="newscreen">
+                <input placeholder="new state (e.g. modal-open)" value="@_newState"
+                       @oninput="e => _newState = e.Value?.ToString() ?? string.Empty" />
+                <button @onclick="AddState">+ State</button>
+            </div>
+            @if (Session.State != "default")
+            {
+                <div class="newscreen">
+                    <input placeholder="rename @Session.State" value="@_renameState"
+                           @oninput="e => _renameState = e.Value?.ToString() ?? string.Empty" />
+                    <button @onclick="() => RenameStateAsync(_renameState)">Rename</button>
+                </div>
+            }
+
             <div class="ph">Catalog</div>
             @foreach (var c in Catalog.Components)
             {
-                <button class="pitem" @onclick="() => Session.Add(c.Name)">
-                    @c.Name
-                    @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
-                </button>
+                <div class="pcat">
+                    <button class="pitem" @onclick="() => Session.Add(c.Name)">
+                        @c.Name
+                        @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
+                    </button>
+                    <button class="ovbtn" title="add as overlay" @onclick="() => Session.AddOverlay(c.Name)">⧉</button>
+                </div>
             }
 
             <div class="ph">Elements</div>
@@ -59,6 +84,22 @@
                     @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
                 </button>
             }
+            @if (Session.Overlays.Count > 0)
+            {
+                <div class="ph layers-h">Overlays</div>
+                @foreach (var ov in Session.Overlays)
+                {
+                    @foreach (var (node, depth) in Flatten(ov, 0))
+                    {
+                        <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
+                                style="padding-left:@(depth * 14 + 8)px"
+                                @onclick="() => Session.Select(node.Id)">
+                            <span class="lname">@node.DisplayName</span>
+                            @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
+                        </button>
+                    }
+                }
+            }
         </div>
 
         <!-- canvas -->
@@ -66,6 +107,15 @@
             <LayoutView Layout="_shellType">
                 @RenderNode(Session.Root)
             </LayoutView>
+            @if (Session.Overlays.Count > 0)
+            {
+                <div class="ov-layer">
+                    @foreach (var ov in Session.Overlays)
+                    {
+                        <div class="ov-item">@RenderNode(ov)</div>
+                    }
+                </div>
+            }
         </div>
 
         <!-- props -->
@@ -246,7 +296,14 @@
     .lrow:hover { background: #eef0f4; }
     .lrow.lsel { background: #eaecfd; color: #4550c8; }
     .lrow .lc { margin-left: auto; font-size: 9px; color: #8a8f9c; background: #eef0f4; padding: 0 5px; border-radius: 8px; }
-    .canvas { background: #eef0f4; }
+    .canvas { background: #eef0f4; position: relative; }
+    .statepick { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 4px 4px; }
+    .pcat { display: flex; align-items: center; gap: 2px; }
+    .pcat .pitem { flex: 1; }
+    .ovbtn { font-size: 12px; border: 1px solid #e2e5ec; background: #fff; color: #8a8f9c; border-radius: 5px; width: 24px; height: 26px; cursor: pointer; }
+    .ovbtn:hover { border-color: #5b6cf0; color: #5b6cf0; }
+    .ov-layer { position: absolute; inset: 0; background: rgba(20,24,40,.28); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 5; }
+    .ov-item { max-width: 90%; }
     .ptarget { display: flex; align-items: center; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 13px; color: #5b6cf0; padding: 6px 4px; border-bottom: 1px solid #eef0f4; margin-bottom: 6px; }
     .pactions button { font: inherit; border: 1px solid #e2e5ec; background: #fff; border-radius: 5px; width: 24px; height: 22px; cursor: pointer; margin-left: 2px; }
     .pactions .del { color: #c0392b; border-color: #f3caca; }
@@ -277,6 +334,8 @@
     private string _designsDir = "";
     private List<ScreenRef> _screens = new();
     private string _newName = "";
+    private string _newState = "";
+    private string _renameState = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -307,6 +366,45 @@
         Session.New(_newName, Options.DefaultShellName);
         ApplyShell();
         _newName = "";
+    }
+
+    // States of the current screen: those saved on disk, plus `default` and the
+    // in-memory current state (which may be unsaved yet).
+    private IEnumerable<string> StatesForCurrentScreen()
+    {
+        var states = _screens.Where(s => s.Screen == Session.Screen).Select(s => s.State).ToList();
+        if (!states.Contains("default")) states.Insert(0, "default");
+        if (!states.Contains(Session.State)) states.Add(Session.State);
+        return states.Distinct();
+    }
+
+    private async Task SwitchStateAsync(string state)
+    {
+        if (state == Session.State) return;
+        var file = Path.Combine(_designsDir, $"{Session.Screen}.{state}.json");
+        if (File.Exists(file)) { await Session.LoadAsync(file); ApplyShell(); _saved = null; }
+        else Session.NewState(state);   // unsaved variant, cloned from the current tree
+    }
+
+    private void AddState()
+    {
+        if (string.IsNullOrWhiteSpace(_newState)) return;
+        Session.NewState(_newState.Trim());
+        _newState = "";
+    }
+
+    // Rename the current (non-default) state: write the new file, drop the old one.
+    private async Task RenameStateAsync(string newName)
+    {
+        newName = newName?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(newName) || newName == Session.State || Session.State == "default") return;
+        var old = Session.State;
+        Session.SetState(newName);
+        await Session.SaveAsync(_designsDir);
+        Store.Delete(_designsDir, $"{Session.Screen}.{old}");
+        RefreshScreens();
+        _renameState = "";
+        _saved = null;
     }
 
     private void DeleteScreenAsync(ScreenRef s)

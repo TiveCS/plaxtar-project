@@ -12,7 +12,9 @@ public sealed class ScreenDoc
     [JsonPropertyName("state")] public string State { get; set; } = "default";
     [JsonPropertyName("fe")] public string? Fe { get; set; }
     [JsonPropertyName("shell")] public string? Shell { get; set; }
+    [JsonPropertyName("route")] public string? Route { get; set; }
     [JsonPropertyName("root")] public NodeDto Root { get; set; } = new();
+    [JsonPropertyName("overlays")] public List<NodeDto>? Overlays { get; set; }
 }
 
 public sealed class NodeDto

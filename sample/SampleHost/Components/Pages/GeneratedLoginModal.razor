@@ -1,0 +1,35 @@
+@page "/generated-login-modal"
+@layout SampleLayout
+@using SampleHost.SampleUi
+
+@* Codegen output from designs/login.modal-open.json. The `overlays` render
+   conditionally on the state flag (SPEC §8 / CLAUDE.md contract §4). *@
+
+<div class="login-form" style="display:flex;flex-direction:column;gap:12px">
+    <TextField Label="Email" Placeholder="you@example.com" @bind-Value="email" />
+</div>
+
+@if (modalOpen)
+{
+    <div class="modal-backdrop">
+        <Modal Title="Confirm sign in" OnClose="CloseModal">
+            <Badge Text="Continue" Variant="Badge.BadgeVariant.Ok" OnClick="Confirm" />
+        </Modal>
+    </div>
+}
+
+<style>
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(20,24,40,.28); display: flex; align-items: center; justify-content: center; }
+</style>
+
+@code {
+    private string? email;                 // from bindings: Value -> email
+    private bool modalOpen = true;         // state flag: modal-open
+
+    private void CloseModal() => modalOpen = false;   // from events: OnClose
+
+    private void Confirm()                 // from events: OnClick
+    {
+        // TODO: implement
+    }
+}

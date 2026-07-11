@@ -76,6 +76,31 @@
       "Params": []
     },
     {
+      "Name": "Modal",
+      "Assembly": "SampleHost",
+      "Src": "Components/SampleUi/Modal.razor",
+      "Params": [
+        {
+          "Name": "Title",
+          "Type": "string",
+          "Kind": "Primitive",
+          "Bindable": false
+        },
+        {
+          "Name": "OnClose",
+          "Type": "EventCallback",
+          "Kind": "Event",
+          "Bindable": false
+        },
+        {
+          "Name": "ChildContent",
+          "Type": "RenderFragment",
+          "Kind": "ChildContent",
+          "Bindable": false
+        }
+      ]
+    },
+    {
       "Name": "SampleLayout",
       "Assembly": "SampleHost",
       "Src": "Components/SampleUi/SampleLayout.razor",

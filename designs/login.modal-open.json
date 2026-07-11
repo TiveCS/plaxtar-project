@@ -1,0 +1,36 @@
+{
+  "schema": "plaxtar.designer/v1",
+  "screen": "login",
+  "state": "modal-open",
+  "fe": "SampleHost",
+  "shell": "SampleLayout",
+  "root": {
+    "element": "div",
+    "class": "login-form",
+    "style": "display:flex;flex-direction:column;gap:12px",
+    "children": [
+      {
+        "component": "TextField",
+        "src": "Components/SampleUi/TextField.razor",
+        "params": { "Label": "Email", "Placeholder": "you@example.com" },
+        "bindings": { "Value": "email" }
+      }
+    ]
+  },
+  "overlays": [
+    {
+      "component": "Modal",
+      "src": "Components/SampleUi/Modal.razor",
+      "params": { "Title": "Confirm sign in" },
+      "events": { "OnClose": "CloseModal" },
+      "children": [
+        {
+          "component": "Badge",
+          "src": "Components/SampleUi/Badge.razor",
+          "params": { "Text": "Continue", "Variant": { "$enum": "BadgeVariant.Ok" } },
+          "events": { "OnClick": "Confirm" }
+        }
+      ]
+    }
+  ]
+}
