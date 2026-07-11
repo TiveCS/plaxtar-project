@@ -187,6 +187,12 @@ One file per **(screen, state)**: `designs/<screen>.<state>.json`. `<state>` = `
 }
 ```
 
+A **Node** is one of three kinds:
+
+- **component** — as above (`component` + typed `params`/`bindings`/`events`/`slots`).
+- **element** — a raw HTML tag: `{ "element": "nav", "class": "...", "style": "...", "layout": {…}, "attributes": { "data-testid": "main-nav", "aria-label": "Primary" }, "children": [<Node>] }`. `attributes` is a free map of passthrough attributes (`data-*`, `aria-*`, `id`, `href`, `role`, …), emitted verbatim, distinct from typed params. Void tags (`img`, `input`, `br`, `hr`) carry no children/text. **Attributes are element-only** — for a test hook on a component, wrap it in an element.
+- **text** — literal content: `{ "text": "Sign in" }`. A first-class node so mixed content (`<p>Hello <b>world</b></p>` = element `p` with a text child + a `b` child) is expressible; codegen emits the text verbatim (HTML-encoded).
+
 Value encodings: enums as `{ "$enum": "Type.Member" }`; raw/complex as `{ "$raw": "new Foo{…}" }`; bound field as `{ "$bind": "fieldName" }`. Everything else is a JSON literal.
 
 ### 7.4 Example (audit-log, default) — abbreviated
@@ -335,3 +341,24 @@ Plaxtar/                         (this repo)
 - **Spike gate:** run the FE in dev, hit `/design`, confirm a `DynamicComponent`-rendered real component appears inside the real Shell with live services.
 - **Round-trip test:** design a known screen → export JSON → have the agent generate `.razor` from `get_screen` → diff generated page against a hand-written reference; assert component identity, params, nesting, layout match.
 - **Prod-safety test:** build in `Release`; assert `/design` returns 404 and the designer assembly is absent from output.
+
+---
+
+## 16. Designer UX & native-HTML essentials (planned)
+
+Resolved in a grill session. Split into **essentials (build now)** and **UX polish (deferred to a dedicated Designer UI/UX grill)** — the owner has many more UX issues to work through, so catalog + drag are held until that pass.
+
+### 16.1 Native elements + text nodes — *essential*
+Real apps compose raw HTML, not only components. The tree already supports element nodes; add:
+- **Text nodes** (schema §7.3): a third node kind, selectable/orderable, so `<p>`, `<h4>`, `<li>`, `<a>` get content and mixed content works.
+- **Element palette**: curated groups — *Text* (`p`, `h1`–`h6`, `a`), *Inline* (`span`, `i`, `b`, `strong`, `em`), *Lists* (`ul`, `ol`, `li`), *Forms* (`form`, `label`, `input`, `select`, `option`, `button`, `textarea`), *Semantic* (`nav`, `header`, `footer`, `section`, `article`, `aside`), *Media* (`img`) — plus a **free-text "any tag"** box and a **Text** quick-add. Void tags (`img`/`input`/`br`/`hr`) render childless.
+- **Icons:** the office FE renders icons as `<i class="fa fa-…">` (Font Awesome). No icon-specific model — `<i>` is a first-class palette entry and the glyph rides on the existing `class` field. (Font Awesome CSS must be loaded by the host for the glyph to show on the canvas; otherwise `<i>` renders empty but codegen is still correct.)
+
+### 16.2 Passthrough attributes (element-only) — *essential*
+Element nodes gain an `attributes` map (schema §7.3) for `data-*`, `aria-*`, `id`, `href`, `role`, `title`, … — edited via a key-value list in the Props panel, emitted verbatim in codegen, separate from typed params. Components don't take passthrough attributes (splat risk); wrap in an element for test hooks.
+
+### 16.3 Catalog scaling — *deferred (Designer UI/UX grill)*
+Direction: a **search/filter** box over the palette, components **grouped by namespace/assembly** into **collapsible** sections (containers marked); grouping is free from existing catalog metadata. Held pending the broader UI/UX pass, since the palette is part of a larger designer-UI rework.
+
+### 16.4 Drag UX (JS-interop) — *deferred (Designer UI/UX grill)*
+Direction: a **JS-interop drag layer** for instant feedback without per-mousemove Server round-trips — an **insertion line** (before/after by cursor position), target-container **glow** for drop-*into*, **move-out** insertion at the parent level; JS owns hover visuals, server called **once on drop** with `{ targetId, position: before | after | into }`; reorder is **insert** (not swap); drag JS ships as an RCL static asset. Held with §16.3 for the UX pass.

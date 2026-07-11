@@ -16,6 +16,10 @@ _Avoid_: widget, element, block
 The nested `{ type, params, children }` structure a screen composes to. It IS the component hierarchy (flow/DOM), not coordinates. Exported as JSON.
 _Avoid_: layout, mockup, artboard
 
+**Node kind**:
+Every node in a Design Tree is one of three kinds. A **component** node is a real Blazor component (typed `params`, `bindings`, `events`, slots). An **element** node is a raw HTML tag (`class`, `style`, structured `layout`, and arbitrary passthrough `attributes` like `data-testid`/`aria-*`). A **text** node is literal text content — a first-class, selectable, orderable node, so mixed content (`<p>Hello <b>world</b></p>`) is expressible. Passthrough `attributes` are element-only; to put a test hook on a component, wrap it in an element.
+_Avoid_: widget, tag, leaf (use "component / element / text node")
+
 **State**:
 A named variant of a Screen with specific conditions applied (default, modal-open, error, empty). Each State exports as its own Design Tree.
 _Avoid_: variant, mode
