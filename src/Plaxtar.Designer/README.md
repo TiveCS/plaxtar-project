@@ -8,26 +8,7 @@ codegen-grade Design Tree (`plaxtar.designer/v1`) that an AI agent turns into re
 It runs at a dev-only route **you choose** inside your own app, so it renders against
 your real DI, auth, and layout — no isolated canvas, no component redraw, no drift.
 
-## Build the package (`.nupkg`)
-
-The `.nupkg` is git-ignored — build it from source after cloning:
-
-```powershell
-# from repo root
-dotnet pack src/Plaxtar.Designer/Plaxtar.Designer.csproj -c Release -o nupkg
-```
-
-Output: `nupkg/Plaxtar.Designer.<version>.nupkg`, multi-targeted `net8.0` + `net10.0`
-(a .NET 8 app can consume it; a .NET 10 app can too). Consume it by pointing a local
-feed at the `nupkg/` folder, or reference the project directly (see below).
-
-```xml
-<!-- nuget.config — add the local folder as a feed -->
-<add key="local" value="./nupkg" />
-```
-
-Requires the **.NET 10 SDK** to build (it multi-targets); the *consuming* app can stay
-on .NET 8.
+> Building the `.nupkg` from source: see the repo-root README.
 
 ## Install (dev-only gating)
 
