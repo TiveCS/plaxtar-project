@@ -4,7 +4,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 7px 12px;
+    padding: 5px 10px;
     border-radius: 6px;
     border: 1px solid transparent;
     cursor: pointer;
@@ -22,4 +22,4 @@
 .pa-danger { background: #fff; color: #b91c1c; border-color: #fecaca; }
 .pa-danger:hover:not(:disabled) { background: #fef2f2; }
 
-.pa-icon { padding: 7px; }
+.pa-icon { padding: 5px; }
