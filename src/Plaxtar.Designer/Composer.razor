@@ -179,7 +179,8 @@
                                         @ondragstart="() => BeginDragNode(node.Id)"
                                         @oncontextmenu:preventDefault="true" @oncontextmenu="e => OpenCtx(node.Id, e)"
                                         @onclick="() => Session.Select(node.Id)">
-                                    <span class="lname">@node.DisplayName</span>
+                                    <span class="lname">@(string.IsNullOrWhiteSpace(node.Name) ? node.DisplayName : node.Name)</span>
+                                    @if (!string.IsNullOrWhiteSpace(node.Name)) { <span class="ltype">@node.DisplayName</span> }
                                     @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
                                 </button>
                             }
@@ -193,7 +194,8 @@
                                         <button type="button" class="lrow @(Session.SelectedId == node.Id ? "lsel" : "")"
                                                 style="padding-left:@(depth * 14 + 8)px"
                                                 @onclick="() => Session.Select(node.Id)">
-                                            <span class="lname">@node.DisplayName</span>
+                                            <span class="lname">@(string.IsNullOrWhiteSpace(node.Name) ? node.DisplayName : node.Name)</span>
+                                    @if (!string.IsNullOrWhiteSpace(node.Name)) { <span class="ltype">@node.DisplayName</span> }
                                             @if (node.Children.Count > 0) { <span class="lc">@node.Children.Count</span> }
                                         </button>
                                     }
@@ -299,6 +301,12 @@
                         <button title="down" @onclick="() => Session.Move(sel.Id, 1)">↓</button>
                         <button title="remove" class="del" @onclick="() => Session.Remove(sel.Id)">✕</button>
                     </div>
+                </div>
+
+                <div class="prow">
+                    <label>name <span class="ptype">Layers label</span></label>
+                    <input type="text" placeholder="e.g. Email field (optional)"
+                           value="@sel.Name" @onchange="e => Session.SetName(sel.Id, e.Value?.ToString())" />
                 </div>
 
                 @if (sel.IsText)
@@ -753,7 +761,8 @@
     .lrow:hover { background: #eef0f4; }
     .lrow.lsel { background: #eaecfd; color: #4550c8; }
     .lrow .lc { margin-left: auto; font-size: 9px; color: #8a8f9c; background: #eef0f4; padding: 0 5px; border-radius: 8px; }
-    .lname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lname { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lrow .ltype { flex: none; font-size: 10px; color: #9aa0ad; }
     .pcat { display: flex; align-items: center; gap: 2px; }
     .pcat .pitem { flex: 1; }
     .cgroup { margin-bottom: 2px; }

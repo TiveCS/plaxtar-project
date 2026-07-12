@@ -11,6 +11,7 @@ public sealed class EditableNode
 {
     public string Id { get; } = Guid.NewGuid().ToString("N")[..8];
 
+    public string? Name { get; set; }        // optional human label (Layers legibility; agent may use for naming/comments)
     public string? Component { get; set; }   // component node
     public string? Element { get; set; }     // raw HTML element node (e.g. "div")
     public string? Text { get; set; }        // text node: literal content

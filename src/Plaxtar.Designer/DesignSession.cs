@@ -173,6 +173,7 @@ public sealed class DesignSession
     // BindExpr|RawExpr records, so a shallow value copy is safe.
     public EditableNode CloneNode(EditableNode src) => new()
     {
+        Name = src.Name,
         Component = src.Component, Element = src.Element, Text = src.Text, Src = src.Src,
         CssClass = src.CssClass, Style = src.Style,
         Layout = new(src.Layout), Attributes = new(src.Attributes),
@@ -463,6 +464,15 @@ public sealed class DesignSession
     }
 
     // <Name>="Handler" for an EventCallback param. Empty handler removes the event.
+    // Set an optional human label on a node (Layers legibility). Empty clears it.
+    public void SetName(string id, string? name)
+    {
+        var node = FindAny(id);
+        if (node is null) return;
+        node.Name = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        Notify();
+    }
+
     // Set the codegen handler-stub name for an event, preserving any Transition target.
     public void SetEvent(string id, string name, string? handler)
     {
@@ -559,6 +569,7 @@ public sealed class DesignSession
     // Deep-copy a node (new Ids) so a cloned State edits independently of its source.
     private EditableNode Clone(EditableNode n) => new()
     {
+        Name = n.Name,
         Component = n.Component,
         Element = n.Element,
         Text = n.Text,
@@ -577,12 +588,13 @@ public sealed class DesignSession
     private EditableNode ToEditable(NodeDto dto)
     {
         if (dto.Text is not null)
-            return new EditableNode { Text = dto.Text };
+            return new EditableNode { Text = dto.Text, Name = dto.Name };
 
         if (dto.Element is not null)
         {
             return new EditableNode
             {
+                Name = dto.Name,
                 Element = dto.Element,
                 CssClass = dto.CssClass,
                 Style = dto.Style,
@@ -593,7 +605,7 @@ public sealed class DesignSession
         }
 
         var type = _resolver.Resolve(dto.Component!);
-        var node = new EditableNode { Component = dto.Component, Src = dto.Src };
+        var node = new EditableNode { Component = dto.Component, Src = dto.Src, Name = dto.Name };
         foreach (var (key, el) in dto.Params)
         {
             var prop = type.GetProperty(key);
@@ -615,6 +627,7 @@ public sealed class DesignSession
     private object ToDto(EditableNode n)
     {
         var dict = new Dictionary<string, object?>();
+        if (!string.IsNullOrWhiteSpace(n.Name)) dict["name"] = n.Name;
 
         if (n.IsText)
         {

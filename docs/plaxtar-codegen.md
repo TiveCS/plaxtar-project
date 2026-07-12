@@ -64,6 +64,13 @@ A `Node` is one of three kinds:
 }
 ```
 
+### `name` (any node)
+
+Any node may carry an optional `"name"` — a short human label shown in the Composer's
+Layers tree for legibility (e.g. `"Email field"`). It is **not structural**: it never
+changes the emitted markup. You MAY use it to pick a readable variable/handler name or
+drop a `@* … *@` comment; otherwise ignore it.
+
 ### Value encodings (param values)
 
 - `{ "$enum": "Type.Member" }` → `Type.Member` (declaring-type qualified, e.g. `Badge.BadgeVariant.Ok`)

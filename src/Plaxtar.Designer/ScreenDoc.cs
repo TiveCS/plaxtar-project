@@ -19,6 +19,7 @@ public sealed class ScreenDoc
 
 public sealed class NodeDto
 {
+    [JsonPropertyName("name")] public string? Name { get; set; }
     [JsonPropertyName("component")] public string? Component { get; set; }
     [JsonPropertyName("element")] public string? Element { get; set; }
     [JsonPropertyName("text")] public string? Text { get; set; }

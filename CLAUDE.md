@@ -39,6 +39,8 @@ A `Node` is one of three kinds: a **component** (`component`), a raw HTML **elem
 `Node` (component form):
 ```jsonc
 {
+  "name": "Audit table",              // optional human label (any node kind); Layers legibility.
+                                      // Agent MAY use it for a variable/handler name or a comment; not structural.
   "component": "AuditLogTable",       // type name as written in markup
   "src": "UI.Audit/Components/AuditLogTable.razor",
   "params": { "Striped": true, "PageSize": 25, "Range": { "$enum": "AuditRange.Last7Days" } },
