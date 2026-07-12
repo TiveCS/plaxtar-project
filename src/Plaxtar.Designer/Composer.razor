@@ -125,6 +125,11 @@
                                        @oninput="e => _newTag = e.Value?.ToString() ?? string.Empty" />
                                 <PaButton Variant="PaButton.Kind.Primary" OnClick="AddFreeTag">+ Tag</PaButton>
                             </div>
+                            <div class="newrow">
+                                <input placeholder="fa fa-user (icon)" value="@_newIcon"
+                                       @oninput="e => _newIcon = e.Value?.ToString() ?? string.Empty" />
+                                <PaButton Variant="PaButton.Kind.Primary" OnClick="AddIcon">+ Icon</PaButton>
+                            </div>
                             @foreach (var (group, tags) in HtmlTags.Palette)
                             {
                                 <div class="egroup">
@@ -191,6 +196,14 @@
                 {
                     var disp = LV(sel, "display");
                     var pos = LV(sel, "position");
+                    @if (!sel.IsVoidElement)
+                    {
+                        <div class="prow">
+                            <label>text</label>
+                            <input type="text" value="@Session.ElementText(sel)" placeholder="inline text (e.g. a label)…"
+                                   @onchange="e => Session.SetElementText(sel.Id, e.Value?.ToString())" />
+                        </div>
+                    }
                     <div class="ph slots-h">Layout</div>
                     <div class="slotpick">
                         <button class="slotbtn" @onclick="() => ClearLayout(sel.Id)">clear</button>
@@ -831,6 +844,9 @@
         Session.AddElement(_newTag);
         _newTag = "";
     }
+
+    private string _newIcon = "";
+    private void AddIcon() { Session.AddIcon(_newIcon); _newIcon = ""; }
 
     // JS drag layer (#23, ADR 0007): the client module resolves the drop zone and
     // calls OnDropAt once, on drop. The payload is the _drag* state set server-side by

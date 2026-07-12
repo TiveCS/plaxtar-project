@@ -129,6 +129,10 @@ public sealed class DesignSession
     public void AddElement(string tag) => Place(new EditableNode { Element = tag.Trim().TrimStart('<').TrimEnd('>') });
     public void AddText(string text = "text") => Place(new EditableNode { Text = text });
 
+    // Icon quick-add (#25): an <i> whose class is the Font Awesome name, no children.
+    public void AddIcon(string? faClass) =>
+        Place(new EditableNode { Element = "i", CssClass = string.IsNullOrWhiteSpace(faClass) ? "fa fa-star" : faClass.Trim() });
+
     // Add a top-level overlay (e.g. a Modal) for the current State.
     public void AddOverlay(string component)
     {
@@ -284,6 +288,24 @@ public sealed class DesignSession
     public void SetText(string id, string? value)
     {
         if (FindAny(id) is { IsText: true } n) { n.Text = value ?? ""; Notify(); }
+    }
+
+    // Inline element text (#24): the element's leading/only Text child, as a single
+    // field. Empty removes it; otherwise edits it in place or appends one (so it lands
+    // after e.g. a leading <i> icon). Mixed content stays fully editable as nodes.
+    public string ElementText(EditableNode n) => n.Children.FirstOrDefault(c => c.IsText)?.Text ?? "";
+
+    public void SetElementText(string id, string? text)
+    {
+        if (FindAny(id) is not { IsElement: true, IsVoidElement: false } n) return;
+        var existing = n.Children.FirstOrDefault(c => c.IsText);
+        if (string.IsNullOrEmpty(text))
+        {
+            if (existing is not null) n.Children.Remove(existing);
+        }
+        else if (existing is not null) existing.Text = text;
+        else n.Children.Add(new EditableNode { Text = text });
+        Notify();
     }
 
     // Passthrough attribute on an element (data-*/aria-*/id...). A null value removes
