@@ -107,3 +107,16 @@ regenerated on every export; don't hand-edit it (its source is `docs/plaxtar-cod
 Commit the design trees and `<screen>.flow.json` position sidecars; ignore the regenerable
 artifacts (`*.png`, `AGENTS.md`) under your designs folder — see this repo's `.gitignore` for
 the pattern (mirror it under a custom `DesignsPath`).
+
+## Persistence on an ephemeral dev server
+
+If you host the Composer on a dev server for non-devs (e.g. analysts) whose container
+filesystem is wiped on restart, keep their work with either:
+
+- **Durable storage (server-side):** point `DesignsPath` at a mounted persistent volume, so
+  designs survive restarts with no app changes.
+- **Download / Import (portability):** the Composer's top bar has **Download all** (a `.zip`
+  of every design tree + `flow.json` sidecar), **Download screen** (one screen), and
+  **Import** (drop a `.zip` or a single `.json`). Import merges — imported files win, other
+  existing screens are untouched, and uploads are written by basename only (can't escape the
+  folder). Regenerable `_catalog.json` / `AGENTS.md` are never bundled or imported.

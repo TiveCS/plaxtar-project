@@ -130,6 +130,16 @@ export function pointIn(selector, clientX, clientY) {
     return { x: Math.round(clientX - r.left), y: Math.round(clientY - r.top) };
 }
 
+// Download/Import (#35): trigger a browser download of base64 bytes as a file.
+export function saveFile(name, base64) {
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+}
+
 export function init(ref) {
     dotnet = ref;
     document.addEventListener('dragstart', onStart, true);

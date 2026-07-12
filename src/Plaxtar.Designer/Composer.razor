@@ -10,6 +10,7 @@
 @inject IWebHostEnvironment Env
 @inject IJSRuntime JS
 @using System.Text.Json
+@using Microsoft.AspNetCore.Components.Forms
 @implements IDisposable
 
 <PageTitle>Composer — @Session.Screen</PageTitle>
@@ -76,6 +77,17 @@
         }
         <span class="spacer"></span>
         @if (_saved is not null) { <span class="okmsg">saved → @_saved</span> }
+        @if (_importMsg is not null) { <span class="okmsg">@_importMsg</span> }
+        @if (!_preview)
+        {
+            @* Download/Import (#35): survive an ephemeral dev-server container. *@
+            <label class="io-btn" title="Import designs (.zip or .json) — merges, imported wins">
+                &#8593; Import
+                <InputFile OnChange="OnImport" accept=".zip,.json" />
+            </label>
+            <PaButton OnClick="DownloadScreen" Title="Download this screen (.zip)">&#10515; Screen</PaButton>
+            <PaButton OnClick="DownloadAll" Title="Download all designs (.zip)">&#10515; All</PaButton>
+        }
         <PaButton OnClick="TogglePreview" Title="Preview = raw, full-width, true-fidelity (non-interactive)">@(_preview ? "✎ Edit" : "◱ Preview")</PaButton>
         <PaButton Variant="PaButton.Kind.Primary" OnClick="SaveAsync">Save</PaButton>
     </div>
@@ -672,6 +684,10 @@
     .qchip .qname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .spacer { flex: 1; }
     .okmsg { font-size: 12px; color: #16884a; }
+    .io-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 12px;
+        border: 1px solid #d0d4dc; border-radius: 6px; background: #fff; color: #1f2430; cursor: pointer; }
+    .io-btn:hover { background: #f2f3f7; }
+    .io-btn input[type=file] { display: none; }
     .newrow { display: flex; gap: 6px; align-items: center; }
     .newrow input { flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; }
 
@@ -805,6 +821,7 @@
     private Type? _shellType;
     private bool _preview;      // true = raw, full-width, true-fidelity render (ADR 0005)
     private string? _saved;
+    private string? _importMsg;    // Download/Import (#35) status
 
     private string _designsDir = "";
     private List<ScreenRef> _screens = new();
@@ -1177,6 +1194,37 @@
     {
         _saved = Path.GetFileName(await Session.SaveAsync(_designsDir));
         RefreshScreens();
+        StateHasChanged();
+    }
+
+    // --- Download/Import (#35): keep BAs' work through an ephemeral dev-server container. ---
+    private Task DownloadAll() => SaveFile($"designs-{DateTime.Now:yyyyMMdd-HHmmss}.zip", DesignBundle.Zip(_designsDir));
+    private Task DownloadScreen() => SaveFile($"{Session.Screen}.zip", DesignBundle.Zip(_designsDir, Session.Screen));
+
+    private async Task SaveFile(string name, byte[] bytes)
+    {
+        if (_dragMod is null) return;
+        await _dragMod.InvokeVoidAsync("saveFile", name, Convert.ToBase64String(bytes));
+    }
+
+    private async Task OnImport(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        _importMsg = null;
+        // ZipArchive needs a seekable stream; buffer the upload first (cap 25 MB).
+        using var ms = new MemoryStream();
+        await using (var up = file.OpenReadStream(maxAllowedSize: 25 * 1024 * 1024)) await up.CopyToAsync(ms);
+        ms.Position = 0;
+        try
+        {
+            var res = await DesignBundle.ImportAsync(ms, file.Name, _designsDir);
+            RefreshScreens();
+            _saved = null;
+            _importMsg = res.Files == 0 ? "nothing imported (empty or unsupported file)"
+                                        : $"imported {res.Files} file(s), {res.Screens} screen(s)";
+        }
+        catch (Exception ex) { _importMsg = $"import failed: {ex.Message}"; }
         StateHasChanged();
     }
 
