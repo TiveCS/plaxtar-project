@@ -9,6 +9,7 @@
 @inject PlaxtarDesignerOptions Options
 @inject IWebHostEnvironment Env
 @inject IJSRuntime JS
+@using System.Text.Json
 @implements IDisposable
 
 <PageTitle>Composer — @Session.Screen</PageTitle>
@@ -54,6 +55,21 @@
                 <span class="topicons-sep"></span>
                 <PaTooltip Text="Undo (Ctrl+Z)" Side="bottom"><PaIconButton Title="Undo" Disabled="!Session.CanUndo" OnClick="() => Session.Undo()">&#8630;</PaIconButton></PaTooltip>
                 <PaTooltip Text="Redo (Ctrl+Y)" Side="bottom"><PaIconButton Title="Redo" Disabled="!Session.CanRedo" OnClick="() => Session.Redo()">&#8631;</PaIconButton></PaTooltip>
+            </span>
+            @* Quick slots (#quickslots): press 1-9 to insert; right-click a palette item to pin;
+               right-click a chip to clear. Persisted per-FE in localStorage. *@
+            <span class="quickbar">
+                @for (int i = 0; i < 9; i++)
+                {
+                    var n = i;
+                    <button class="qchip @(_quick[n] is null ? "qempty" : "")"
+                            title="@(_quick[n] is { } q ? $"{q.Name} — press {n + 1}" : $"slot {n + 1}: empty — right-click a Component/Element to pin")"
+                            @onclick="() => InsertQuick(n)"
+                            @oncontextmenu:preventDefault="true" @oncontextmenu="() => ClearQuick(n)">
+                        <span class="qnum">@(n + 1)</span>
+                        @if (_quick[n] is { } q2) { <span class="qname">@q2.Name</span> }
+                    </button>
+                }
             </span>
         }
         <span class="spacer"></span>
@@ -122,6 +138,7 @@
                                         {
                                             <div class="pcat">
                                                 <button class="pitem" draggable="true" @ondragstart="() => BeginDragCatalog(c.Name)"
+                                                        @oncontextmenu:preventDefault="true" @oncontextmenu='e => OpenPin("component", c.Name, e)'
                                                         @onclick="() => Session.Add(c.Name)">
                                                     @c.Name
                                                     @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
@@ -155,6 +172,7 @@
                                     @foreach (var t in tags)
                                     {
                                         <button class="etag" draggable="true" @ondragstart="() => BeginDragElement(t)"
+                                                @oncontextmenu:preventDefault="true" @oncontextmenu='e => OpenPin("element", t, e)'
                                                 @onclick="() => Session.AddElement(t)">@t</button>
                                     }
                                 </div>
@@ -527,6 +545,20 @@
             }
         </ChildContent>
     </PaMenu>
+
+    @* Pin-to-quick-slot menu, opened by right-clicking a palette item. *@
+    <PaMenu @ref="_pinMenu" Trigger="none">
+        <ChildContent>
+            <div class="ph slots-h" style="padding:6px 9px">Pin @_pinName to</div>
+            @for (int i = 0; i < 9; i++)
+            {
+                var n = i;
+                <PaMenuItem OnClick="() => PinTo(n)">
+                    Slot @(n + 1)@(_quick[n] is { } q ? $"  · {q.Name}" : "")
+                </PaMenuItem>
+            }
+        </ChildContent>
+    </PaMenu>
 </div>
 
 <style>
@@ -541,6 +573,12 @@
     .brand { font-weight: 700; color: #1f2430; margin-right: 4px; }
     .topicons { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; }
     .topicons-sep { width: 1px; height: 20px; background: #e2e5ec; margin: 0 4px; }
+    .quickbar { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; overflow: hidden; }
+    .qchip { display: inline-flex; align-items: center; gap: 4px; max-width: 120px; border: 1px solid #e2e5ec; background: #fafbfc; border-radius: 6px; padding: 3px 6px; font: 11px ui-monospace, monospace; color: #565a66; cursor: pointer; }
+    .qchip:hover { border-color: #5b6cf0; }
+    .qchip.qempty { opacity: .45; padding: 3px 7px; }
+    .qchip .qnum { font-weight: 700; color: #5b6cf0; }
+    .qchip .qname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .spacer { flex: 1; }
     .okmsg { font-size: 12px; color: #16884a; }
     .newrow { display: flex; gap: 6px; align-items: center; }
@@ -553,7 +591,7 @@
     .rail { position: absolute; top: 12px; left: 12px; z-index: 30; display: flex; flex-direction: column; gap: 4px; padding: 5px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 8px 24px rgba(17,24,39,.12); }
     .dock { position: absolute; top: 12px; bottom: 12px; z-index: 25; display: flex; }
     .dock > * { flex: 1; min-height: 0; }
-    .dock-left { left: 62px; width: 256px; }
+    .dock-left { left: 12px; width: 256px; }
     .dock-right { right: 12px; width: 272px; }
     .pfilter { padding: 2px 2px 8px; }
 
@@ -668,6 +706,46 @@
     {
         Session.SetShell(v == NoneLabel ? null : v);
         ApplyShell();
+    }
+
+    // --- Quick slots: 1-9 insert, right-click-to-pin, per-FE localStorage ---
+    private sealed record QuickSlot(string Kind, string Name);
+    private readonly QuickSlot?[] _quick = new QuickSlot?[9];
+    private PaMenu? _pinMenu;
+    private string _pinKind = "", _pinName = "";
+    private string QuickKey => $"plaxtar.quickslots.{Options.Fe ?? "default"}";
+
+    private async Task OpenPin(string kind, string name, MouseEventArgs e)
+    {
+        _pinKind = kind; _pinName = name;
+        if (_pinMenu is not null) await _pinMenu.OpenAtAsync(e.ClientX, e.ClientY);
+    }
+
+    private async Task PinTo(int i) { _quick[i] = new QuickSlot(_pinKind, _pinName); await SaveQuick(); }
+    private async Task ClearQuick(int i) { _quick[i] = null; await SaveQuick(); }
+
+    private void InsertQuick(int i)
+    {
+        if (_quick[i] is not { } q) return;
+        if (q.Kind == "component") Session.Add(q.Name); else Session.AddElement(q.Name);
+    }
+
+    private async Task LoadQuick()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", QuickKey);
+            if (string.IsNullOrWhiteSpace(json)) return;
+            if (JsonSerializer.Deserialize<QuickSlot?[]>(json) is not { } arr) return;
+            for (int i = 0; i < 9; i++) _quick[i] = i < arr.Length ? arr[i] : null;
+            StateHasChanged();
+        }
+        catch { /* corrupt/absent storage — ignore */ }
+    }
+
+    private async Task SaveQuick()
+    {
+        try { await JS.InvokeVoidAsync("localStorage.setItem", QuickKey, JsonSerializer.Serialize(_quick)); } catch { }
     }
 
     // Catalog grouping (#17): group the (filtered) catalog by assembly, collapsible.
@@ -899,6 +977,7 @@
         _dotnetRef = DotNetObjectReference.Create(this);
         _dragMod = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Plaxtar.Designer/pl-drag.js");
         await _dragMod.InvokeVoidAsync("init", _dotnetRef);
+        await LoadQuick();
     }
 
     [JSInvokable]
@@ -926,6 +1005,10 @@
             case "togglePanels": TogglePanels(); break;
             case "undo": Session.Undo(); break;
             case "redo": Session.Redo(); break;
+            default:
+                if (cmd.StartsWith("quick") && int.TryParse(cmd.AsSpan(5), out var qn) && qn is >= 1 and <= 9)
+                    InsertQuick(qn - 1);
+                break;
         }
         await InvokeAsync(StateHasChanged);
     }

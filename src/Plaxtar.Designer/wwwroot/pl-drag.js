@@ -115,6 +115,7 @@ function onKey(e) {
     else if (ctrl && e.key.toLowerCase() === 'b') cmd = 'togglePanels';
     else if (ctrl && e.key.toLowerCase() === 'z') { if (inField()) return; cmd = e.shiftKey ? 'redo' : 'undo'; }
     else if (ctrl && e.key.toLowerCase() === 'y') { if (inField()) return; cmd = 'redo'; }
+    else if (!ctrl && !e.altKey && e.key >= '1' && e.key <= '9') { if (inField()) return; cmd = 'quick' + e.key; }
     if (!cmd) return;
     e.preventDefault();
     if (dotnet) dotnet.invokeMethodAsync('OnShortcut', cmd);
