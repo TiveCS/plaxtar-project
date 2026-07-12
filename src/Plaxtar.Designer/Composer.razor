@@ -106,15 +106,30 @@
                         else if (_panel == Panel.Components)
                         {
                             <div class="pfilter"><PaSearchBar @bind-Value="_catQ" Placeholder="Filter components…" /></div>
-                            @foreach (var c in FilteredCatalog())
+                            @foreach (var grp in GroupedCatalog())
                             {
-                                <div class="pcat">
-                                    <button class="pitem" draggable="true" @ondragstart="() => BeginDragCatalog(c.Name)"
-                                            @onclick="() => Session.Add(c.Name)">
-                                        @c.Name
-                                        @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
+                                @* while filtering, groups auto-expand; otherwise respect the collapse toggle *@
+                                var open = !string.IsNullOrWhiteSpace(_catQ) || !_collapsedGroups.Contains(grp.Key);
+                                <div class="cgroup">
+                                    <button class="cghead" @onclick="() => ToggleGroup(grp.Key)">
+                                        <span class="cgcaret">@(open ? "▾" : "▸")</span>
+                                        <span class="cgname">@grp.Key</span>
+                                        <span class="cgcount">@grp.Count()</span>
                                     </button>
-                                    <button class="ovbtn" title="add as overlay" @onclick="() => Session.AddOverlay(c.Name)">&#10697;</button>
+                                    @if (open)
+                                    {
+                                        @foreach (var c in grp)
+                                        {
+                                            <div class="pcat">
+                                                <button class="pitem" draggable="true" @ondragstart="() => BeginDragCatalog(c.Name)"
+                                                        @onclick="() => Session.Add(c.Name)">
+                                                    @c.Name
+                                                    @if (Session.CanContain(c.Name)) { <span class="cc">container</span> }
+                                                </button>
+                                                <button class="ovbtn" title="add as overlay" @onclick="() => Session.AddOverlay(c.Name)">&#10697;</button>
+                                            </div>
+                                        }
+                                    }
                                 </div>
                             }
                             @if (!FilteredCatalog().Any()) { <p class="muted">No components match.</p> }
@@ -564,6 +579,12 @@
     .lname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pcat { display: flex; align-items: center; gap: 2px; }
     .pcat .pitem { flex: 1; }
+    .cgroup { margin-bottom: 2px; }
+    .cghead { display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: transparent; font: inherit; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #8a8f9c; padding: 6px 4px; cursor: pointer; }
+    .cghead:hover { color: #565a66; }
+    .cgcaret { font-size: 9px; width: 10px; }
+    .cgname { flex: 1; text-align: left; }
+    .cgcount { font-size: 9px; color: #8a8f9c; background: #eef0f4; padding: 0 5px; border-radius: 8px; }
     .ovbtn { font-size: 12px; border: 1px solid #e2e5ec; background: #fff; color: #8a8f9c; border-radius: 5px; width: 24px; height: 26px; cursor: pointer; }
     .ovbtn:hover { border-color: #5b6cf0; color: #5b6cf0; }
     .ov-layer { position: absolute; inset: 0; background: rgba(20,24,40,.28); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 5; }
@@ -648,6 +669,12 @@
         Session.SetShell(v == NoneLabel ? null : v);
         ApplyShell();
     }
+
+    // Catalog grouping (#17): group the (filtered) catalog by assembly, collapsible.
+    private readonly HashSet<string> _collapsedGroups = new();
+    private IEnumerable<IGrouping<string, ComponentInfo>> GroupedCatalog() =>
+        FilteredCatalog().GroupBy(c => c.Assembly).OrderBy(g => g.Key, StringComparer.Ordinal);
+    private void ToggleGroup(string key) { if (!_collapsedGroups.Add(key)) _collapsedGroups.Remove(key); }
 
     private IEnumerable<ComponentInfo> FilteredCatalog() =>
         string.IsNullOrWhiteSpace(_catQ)
