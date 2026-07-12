@@ -25,8 +25,13 @@ wwwroot/dist/
 node_modules/
 *.log
 
-# Plaxtar Designer — exported screenshots are regenerable; keep the JSON, ignore PNGs
+# Plaxtar Designer — keep the JSON design trees + <screen>.flow.json position sidecars;
+# ignore regenerable artifacts: screenshots and the generated AGENTS.md codegen guide
+# (a copy of docs/plaxtar-codegen.md, re-emitted on every /_catalog/export).
+# For a custom output folder (PlaxtarDesignerOptions.DesignsPath, e.g. .plaxtar-designs),
+# mirror these two lines under that folder.
 designs/*.png
+designs/AGENTS.md
 
 # OS
 .DS_Store

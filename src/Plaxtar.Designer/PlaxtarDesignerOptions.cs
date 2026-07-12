@@ -22,6 +22,12 @@ public sealed class PlaxtarDesignerOptions
     // (e.g. "UI.Audit"). Lets the agent map a design back to its owning FE.
     public string? Fe { get; set; }
 
+    // Output folder for design trees, the catalog manifest, and AGENTS.md. Null =
+    // default `designs/` at the repo root. A relative path is resolved against the repo
+    // root (so per-FE modules can scope their own folder, e.g. "designs/audit",
+    // ".plaxtar-designs"); an absolute path is used as-is. Created on first write.
+    public string? DesignsPath { get; set; }
+
     public PlaxtarDesignerOptions AddAssembly(Assembly assembly)
     {
         ComponentAssemblies.Add(assembly);

@@ -52,9 +52,9 @@ if (app.Environment.IsDevelopment())
     // The Composer host page lives in this app (Components/Pages/Designer.razor), so the
     // router discovers it normally — no AddAdditionalAssemblies needed.
 
-    app.MapGet("/_catalog/export", async (ComponentCatalog cat, IWebHostEnvironment env) =>
+    app.MapGet("/_catalog/export", async (ComponentCatalog cat, IWebHostEnvironment env, PlaxtarDesignerOptions opt) =>
     {
-        var dir = DesignPaths.DesignsDir(env.ContentRootPath);
+        var dir = DesignPaths.DesignsDir(env.ContentRootPath, opt.DesignsPath);
         var path = await CatalogManifest.WriteAsync(dir, cat);
         return Results.Ok(new { written = path, count = cat.Components.Count });
     });

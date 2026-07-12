@@ -54,18 +54,18 @@ if (app.Environment.IsDevelopment())
     // the router discovers it normally — no AddAdditionalAssemblies needed.
 
     // #4 dev endpoint: regenerate designs/_catalog.json headlessly (also usable by CI/agents).
-    app.MapGet("/_catalog/export", async (ComponentCatalog cat, IWebHostEnvironment env) =>
+    app.MapGet("/_catalog/export", async (ComponentCatalog cat, IWebHostEnvironment env, PlaxtarDesignerOptions opt) =>
     {
-        var dir = DesignPaths.DesignsDir(env.ContentRootPath);
+        var dir = DesignPaths.DesignsDir(env.ContentRootPath, opt.DesignsPath);
         var path = await CatalogManifest.WriteAsync(dir, cat);
         return Results.Ok(new { written = path, count = cat.Components.Count });
     });
 
     // Dev/CI: load a screen file through the session and re-serialize it, proving the
     // schema round-trips (params, $enum/$bind/$raw markers, bindings, events).
-    app.MapGet("/_designer/roundtrip/{file}", async (string file, DesignSession s, IWebHostEnvironment env) =>
+    app.MapGet("/_designer/roundtrip/{file}", async (string file, DesignSession s, IWebHostEnvironment env, PlaxtarDesignerOptions opt) =>
     {
-        var dir = DesignPaths.DesignsDir(env.ContentRootPath);
+        var dir = DesignPaths.DesignsDir(env.ContentRootPath, opt.DesignsPath);
         await s.LoadAsync(Path.Combine(dir, file + ".json"));
         var outDir = Path.Combine(Path.GetTempPath(), "plaxtar-rt");
         var outPath = await s.SaveAsync(outDir);
