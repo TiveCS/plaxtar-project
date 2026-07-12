@@ -28,6 +28,10 @@ _Avoid_: variant, mode
 A directed edge from a **component** node's event (an `EventCallback` param, e.g. `OnClick`) to a target — either a sibling **State** of the same Screen (bare name, e.g. `modal-open`) or another Screen (dotted, e.g. `audit-detail.default`). Declares *intent* ("this click goes to modal-open"); it is **authored + exported only** — the Composer never executes it. Stored **on the triggering event** in the source State's Design Tree (target is a State/Screen name, never a node Id, since Ids are per-file). The agent realizes it: a same-Screen target by diffing the two States and toggling a flag / revealing an overlay; a cross-Screen target by navigating to that Screen's `route`.
 _Avoid_: link, action, trigger (reserve those; the noun is "Transition")
 
+**Simulate** (Play mode):
+A third Canvas mode (beside Edit and Preview) that lets you *walk your authored **Transitions*** to feel a flow — click a wired control and it loads that Transition's target **State**. Deliberately **not a prototyping tool**: it invents no behavior, only navigates between States you already composed (each is a real render). It runs on a throwaway session loaded from the saved files, so it never touches your edits; every jump just loads `(screen, state)` and re-renders (no fake overlay animation). Its purpose is **verification** — catch a wrong flow before spending codegen tokens — not stakeholder prototyping.
+_Avoid_: prototype, preview (Preview = fidelity check, Simulate = flow check), interactive mockup
+
 **Flow view** (a.k.a. Flow graph):
 The state-machine editor inside the Composer: **States** as boxes, each box exposing its component nodes' events as output **ports**, and **Transitions** drawn as arrows from a port to a target State box. Author + export only — not a clickable prototype, no live simulation. Box positions are editor-only metadata in a `designs/<screen>.flow.json` sidecar (`plaxtar.flow/v1`), never in the Design Tree (which stays coordinate-free) and never read by codegen.
 _Avoid_: prototype, storyboard, wireflow
