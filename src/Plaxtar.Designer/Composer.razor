@@ -19,34 +19,9 @@
     <!-- toolbar -->
     <div class="bar@(_preview && _barHidden ? " bar-hidden" : "")"
          @onmouseenter="ShowBar" @onmouseleave="HideBarSoon">
-        <span class="brand">Plaxtar</span>
+        @* Actions (left): panels, flow, props, undo/redo, quick slots. *@
         @if (!_preview)
         {
-            <PaCombobox Items="ScreenNames()" Selected="@Session.Screen"
-                        SelectedChanged="OnPickScreen" OnDelete="OnDeleteScreen"
-                        Placeholder="screen…" SearchPlaceholder="Search screens…">
-                <Footer>
-                    <div class="newrow">
-                        <input placeholder="new screen name" value="@_newName"
-                               @oninput="e => _newName = e.Value?.ToString() ?? string.Empty" />
-                        <PaButton Variant="PaButton.Kind.Primary" OnClick="NewScreen">+ New</PaButton>
-                    </div>
-                </Footer>
-            </PaCombobox>
-            <PaCombobox Items="StatesForCurrentScreen().ToList()" Selected="@Session.State"
-                        SelectedChanged="OnPickState" OnDelete="OnDeleteState"
-                        Placeholder="state…" SearchPlaceholder="Search states…">
-                <Footer>
-                    <div class="newrow">
-                        <input placeholder="new state (e.g. modal-open)" value="@_newState"
-                               @oninput="e => _newState = e.Value?.ToString() ?? string.Empty" />
-                        <PaButton Variant="PaButton.Kind.Primary" OnClick="AddState">+ New</PaButton>
-                    </div>
-                </Footer>
-            </PaCombobox>
-            <PaCombobox Items="ShellOptions()" Selected="@(Session.Shell ?? NoneLabel)"
-                        SelectedChanged="OnPickShell"
-                        Placeholder="shell…" SearchPlaceholder="Search layouts…" />
             <span class="topicons">
                 <PaTooltip Text="Layers" Side="bottom"><PaIconButton Title="Layers" Active="@(_panel == Panel.Layers)" OnClick="() => TogglePanel(Panel.Layers)">&#9776;</PaIconButton></PaTooltip>
                 <PaTooltip Text="Components" Side="bottom"><PaIconButton Title="Components" Active="@(_panel == Panel.Components)" OnClick="() => TogglePanel(Panel.Components)">&#9635;</PaIconButton></PaTooltip>
@@ -59,8 +34,7 @@
                 <PaTooltip Text="Undo (Ctrl+Z)" Side="bottom"><PaIconButton Title="Undo" Disabled="!Session.CanUndo" OnClick="() => Session.Undo()">&#8630;</PaIconButton></PaTooltip>
                 <PaTooltip Text="Redo (Ctrl+Y)" Side="bottom"><PaIconButton Title="Redo" Disabled="!Session.CanRedo" OnClick="() => Session.Redo()">&#8631;</PaIconButton></PaTooltip>
             </span>
-            @* Quick slots (#quickslots): press 1-9 to insert; right-click a palette item to pin;
-               right-click a chip to clear. Persisted per-FE in localStorage. *@
+            @* Quick slots: press 1-9 to insert; right-click a palette item to pin; right-click a chip to clear. *@
             <span class="quickbar">
                 @for (int i = 0; i < 9; i++)
                 {
@@ -73,6 +47,38 @@
                         @if (_quick[n] is { } q2) { <span class="qname">@q2.Name</span> }
                     </button>
                 }
+            </span>
+        }
+        <span class="spacer"></span>
+        @* Screen changer (center): screen / state / shell. *@
+        @if (!_preview)
+        {
+            <span class="screenpick">
+                <PaCombobox Items="ScreenNames()" Selected="@Session.Screen"
+                            SelectedChanged="OnPickScreen" OnDelete="OnDeleteScreen"
+                            Placeholder="screen…" SearchPlaceholder="Search screens…">
+                    <Footer>
+                        <div class="newrow">
+                            <input placeholder="new screen name" value="@_newName"
+                                   @oninput="e => _newName = e.Value?.ToString() ?? string.Empty" />
+                            <PaButton Variant="PaButton.Kind.Primary" OnClick="NewScreen">+ New</PaButton>
+                        </div>
+                    </Footer>
+                </PaCombobox>
+                <PaCombobox Items="StatesForCurrentScreen().ToList()" Selected="@Session.State"
+                            SelectedChanged="OnPickState" OnDelete="OnDeleteState"
+                            Placeholder="state…" SearchPlaceholder="Search states…">
+                    <Footer>
+                        <div class="newrow">
+                            <input placeholder="new state (e.g. modal-open)" value="@_newState"
+                                   @oninput="e => _newState = e.Value?.ToString() ?? string.Empty" />
+                            <PaButton Variant="PaButton.Kind.Primary" OnClick="AddState">+ New</PaButton>
+                        </div>
+                    </Footer>
+                </PaCombobox>
+                <PaCombobox Items="ShellOptions()" Selected="@(Session.Shell ?? NoneLabel)"
+                            SelectedChanged="OnPickShell"
+                            Placeholder="shell…" SearchPlaceholder="Search layouts…" />
             </span>
         }
         <span class="spacer"></span>
@@ -681,8 +687,8 @@
     .bar { display: flex; align-items: center; gap: 7px; padding: 5px 12px; border-bottom: 1px solid #e2e5ec; background: #fff; z-index: 90; font-size: 12.5px; }
     .is-preview .bar { position: absolute; top: 0; left: 0; right: 0; transition: transform .25s ease; box-shadow: 0 2px 10px rgba(17,24,39,.08); }
     .bar-hidden { transform: translateY(-100%); }
-    .brand { font-weight: 700; color: #1f2430; margin-right: 4px; }
-    .topicons { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; }
+    .screenpick { display: inline-flex; align-items: center; gap: 7px; }
+    .topicons { display: inline-flex; align-items: center; gap: 2px; }
     .topicons-sep { width: 1px; height: 16px; background: #e2e5ec; margin: 0 3px; }
     .quickbar { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; overflow: hidden; }
     .qchip { display: inline-flex; align-items: center; gap: 4px; max-width: 120px; border: 1px solid #e2e5ec; background: #fafbfc; border-radius: 6px; padding: 3px 6px; font: 11px ui-monospace, monospace; color: #565a66; cursor: pointer; }
