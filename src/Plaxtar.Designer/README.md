@@ -50,6 +50,11 @@ if (builder.Environment.IsDevelopment())
                                              // (null = blank canvas / no shell by default;
                                              //  a Shell picker in the top bar switches it live)
         o.Fe = "UI.Audit";                   // optional: micro-frontend id written to exports
+        o.DesignsPath = "designs/audit";     // optional: output folder for trees + catalog +
+                                             // AGENTS.md. Null = "designs/" at the repo root.
+                                             // Relative = under the repo root (per-FE modules
+                                             // can scope their own, e.g. ".plaxtar-designs");
+                                             // absolute = used as-is. Created on first write.
     });
 }
 #endif
@@ -94,4 +99,11 @@ pwsh ./scripts/verify-prod-safety.ps1
 ## Export the Catalog
 
 `GET /_catalog/export` (dev-only) writes `designs/_catalog.json` — the manifest the
-agent reads alongside design trees to resolve param types and import paths.
+agent reads alongside design trees to resolve param types and import paths — and
+`designs/AGENTS.md`, the codegen guide (schema, node kinds, transitions) copied from the
+package so the agent has the full JSON convention beside the trees. `AGENTS.md` is
+regenerated on every export; don't hand-edit it (its source is `docs/plaxtar-codegen.md`).
+
+Commit the design trees and `<screen>.flow.json` position sidecars; ignore the regenerable
+artifacts (`*.png`, `AGENTS.md`) under your designs folder — see this repo's `.gitignore` for
+the pattern (mirror it under a custom `DesignsPath`).

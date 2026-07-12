@@ -11,7 +11,10 @@ public sealed class ScreenStore
 
         return Directory.EnumerateFiles(designsDir, "*.json")
             .Select(Path.GetFileNameWithoutExtension)
-            .Where(name => name is not null && !name.StartsWith('_'))
+            // Skip manifests (_catalog) and Flow-editor position sidecars (<screen>.flow.json),
+            // which share the *.json glob but are not Screen states.
+            .Where(name => name is not null && !name.StartsWith('_')
+                           && !name.EndsWith(".flow", StringComparison.OrdinalIgnoreCase))
             .Select(name =>
             {
                 var dot = name!.LastIndexOf('.');

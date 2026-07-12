@@ -17,12 +17,20 @@ The nested `{ type, params, children }` structure a screen composes to. It IS th
 _Avoid_: layout, mockup, artboard
 
 **Node kind**:
-Every node in a Design Tree is one of three kinds. A **component** node is a real Blazor component (typed `params`, `bindings`, `events`, slots). An **element** node is a raw HTML tag (`class`, `style`, structured `layout`, and arbitrary passthrough `attributes` like `data-testid`/`aria-*`). A **text** node is literal text content — a first-class, selectable, orderable node, so mixed content (`<p>Hello <b>world</b></p>`) is expressible. Passthrough `attributes` are element-only; to put a test hook on a component, wrap it in an element.
+Every node in a Design Tree is one of three kinds. A **component** node is a real Blazor component (typed `params`, `bindings`, `events`, slots). An **element** node is a raw HTML tag (`class`, `style`, structured `layout`, and arbitrary passthrough `attributes` like `data-testid`/`aria-*`). A **text** node is literal text content — a first-class, selectable, orderable node, so mixed content (`<p>Hello <b>world</b></p>`) is expressible. Passthrough `attributes` are element-only; to put a test hook on a component, wrap it in an element. A component node's `events` value is an **object** `{ handler?, to? }` (normalized — no bare-string form): `handler` names the codegen method stub, `to` is a **Transition** target.
 _Avoid_: widget, tag, leaf (use "component / element / text node")
 
 **State**:
-A named variant of a Screen with specific conditions applied (default, modal-open, error, empty). Each State exports as its own Design Tree.
+A named variant of a Screen with specific conditions applied (default, modal-open, error, empty). Each State exports as its own Design Tree. States are connected to one another by **Transitions**.
 _Avoid_: variant, mode
+
+**Transition**:
+A directed edge from a **component** node's event (an `EventCallback` param, e.g. `OnClick`) to a target — either a sibling **State** of the same Screen (bare name, e.g. `modal-open`) or another Screen (dotted, e.g. `audit-detail.default`). Declares *intent* ("this click goes to modal-open"); it is **authored + exported only** — the Composer never executes it. Stored **on the triggering event** in the source State's Design Tree (target is a State/Screen name, never a node Id, since Ids are per-file). The agent realizes it: a same-Screen target by diffing the two States and toggling a flag / revealing an overlay; a cross-Screen target by navigating to that Screen's `route`.
+_Avoid_: link, action, trigger (reserve those; the noun is "Transition")
+
+**Flow view** (a.k.a. Flow graph):
+The state-machine editor inside the Composer: **States** as boxes, each box exposing its component nodes' events as output **ports**, and **Transitions** drawn as arrows from a port to a target State box. Author + export only — not a clickable prototype, no live simulation. Box positions are editor-only metadata in a `designs/<screen>.flow.json` sidecar (`plaxtar.flow/v1`), never in the Design Tree (which stays coordinate-free) and never read by codegen.
+_Avoid_: prototype, storyboard, wireflow
 
 **Screen**:
 The unit of design in the MVP: one page's content region plus its States, rendered inside a chosen Shell.
@@ -51,7 +59,8 @@ _Avoid_: app, service
 ## Relationships
 
 - A **Screen** is designed inside exactly one **Shell** and has one or more **States**
-- Each **State** exports one **Design Tree** (JSON) + optional screenshot into the repo
+- **States** of a Screen form a graph via **Transitions**; a Transition targets a sibling State (same Screen) or another Screen (resolved to that Screen's `route` for navigation)
+- Each **State** exports one **Design Tree** (JSON) + optional screenshot into the repo; a Screen with a hand-arranged **Flow view** also exports a `<screen>.flow.json` position sidecar (editor-only, ignored by codegen)
 - A **Design Tree** is a nesting of **Components**, each configured from the **Catalog**
 - The **MCP server** reads exported JSON files from the repo; the agent turns a **Design Tree** into a real `.razor` page
 - The **Composer** ships as a NuGet package (`Plaxtar.Designer`) that runs **in-process inside the real app** (dev-only route `/design`)

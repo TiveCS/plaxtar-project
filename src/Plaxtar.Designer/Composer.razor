@@ -51,6 +51,8 @@
                 <PaTooltip Text="Components" Side="bottom"><PaIconButton Title="Components" Active="@(_panel == Panel.Components)" OnClick="() => TogglePanel(Panel.Components)">&#9635;</PaIconButton></PaTooltip>
                 <PaTooltip Text="Elements" Side="bottom"><PaIconButton Title="Elements" Active="@(_panel == Panel.Elements)" OnClick="() => TogglePanel(Panel.Elements)">&#9671;</PaIconButton></PaTooltip>
                 <span class="topicons-sep"></span>
+                <PaTooltip Text="Flow — state transitions" Side="bottom"><PaIconButton Title="Flow" Active="_flow" OnClick="ToggleFlow">&#10070;</PaIconButton></PaTooltip>
+                <span class="topicons-sep"></span>
                 <PaTooltip Text="Properties" Side="bottom"><PaIconButton Title="Properties" Active="_propsOpen" OnClick="() => _propsOpen = !_propsOpen">&#9636;</PaIconButton></PaTooltip>
                 <span class="topicons-sep"></span>
                 <PaTooltip Text="Undo (Ctrl+Z)" Side="bottom"><PaIconButton Title="Undo" Disabled="!Session.CanUndo" OnClick="() => Session.Undo()">&#8630;</PaIconButton></PaTooltip>
@@ -79,6 +81,73 @@
     </div>
 
     <div class="stage">
+      @if (_flow)
+      {
+        @* Flow view (#32/#34, ADR 0008): state machine. States as boxes, each component
+           node's EventCallback params as ports, Transitions (`to`) as arrows. Drag a port
+           onto a target box to author a same-screen transition; use the port ⋮ menu for a
+           cross-screen target; ✕ clears it. Drag a box header to reposition (persisted to
+           <screen>.flow.json). Positions load from that sidecar (auto-layout otherwise). *@
+        var fm = FlowModel();
+        var (bw, bh) = FlowBoardSize(fm);
+        <div class="flowboard">
+          <div class="flowcanvas" style="width:@((int)bw)px;height:@((int)bh)px"
+               @ondragover:preventDefault="true" @ondrop="FlowDropOnCanvas">
+            <svg class="flowedges" width="@((int)bw)" height="@((int)bh)">
+              <defs>
+                <marker id="flowarrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                  <path d="M0,0 L7,3 L0,6 Z" fill="#5b6cf0" />
+                </marker>
+              </defs>
+              @foreach (var e in FlowEdges(fm))
+              {
+                <path d="@EdgePath(e)" class="flowedge" marker-end="url(#flowarrow)" />
+              }
+            </svg>
+            @foreach (var e in FlowEdges(fm))
+            {
+              @if (e.Cross)
+              {
+                <div class="flowext" style="left:@((int)e.X2)px;top:@((int)e.Y2 - 11)px" title="navigates to @e.Label">@e.Label</div>
+              }
+            }
+            @foreach (var b in fm.Boxes)
+            {
+              <div class="flowbox @(b.State == Session.State ? "cur" : "")"
+                   style="left:@((int)b.X)px;top:@((int)b.Y)px;width:@((int)FlowGraph.BoxW)px"
+                   @ondragover:preventDefault="true" @ondrop="() => FlowDropOnBox(b)">
+                <div class="fbhead" draggable="true" title="drag to reposition"
+                     @ondragstart="e => FlowBoxDragStart(b, e)">@b.State</div>
+                @if (b.Ports.Count == 0)
+                {
+                  <div class="fbempty">no component events</div>
+                }
+                @foreach (var port in b.Ports)
+                {
+                  <div class="fbport @(port.To is null ? "" : "wired")"
+                       draggable="true" title="drag onto a state to link"
+                       @ondragstart="() => FlowPortDragStart(b, port)">
+                    <span class="fbdot"></span>
+                    <span class="fbname">@port.Component<span class="fbev">.@port.Event</span></span>
+                    @if (port.To is not null) { <span class="fbto">&#8594; @port.To</span> }
+                    <span class="fbacts">
+                      <button class="fba" title="link to another screen"
+                              @onclick="e => OpenFlowMenu(b, port, e)" @onclick:stopPropagation="true">&#8942;</button>
+                      @if (port.To is not null)
+                      {
+                        <button class="fba fbx" title="clear transition"
+                                @onclick="() => FlowClear(b, port)" @onclick:stopPropagation="true">&#10005;</button>
+                      }
+                    </span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+      else
+      {
         @* Panels float OVER a full-width canvas (ADR 0006). The toggle icons live in
            the top bar (not a floating rail — that collided with the app Shell's nav). *@
         @if (!_preview)
@@ -445,11 +514,16 @@
                     <div class="ph slots-h">Events</div>
                     @foreach (var ev in events)
                     {
+                        var evb = sel.Events.GetValueOrDefault(ev.Name);
                         <div class="prow">
                             <label>@ev.Name <span class="ptype">@ev.Type</span></label>
                             <input type="text" placeholder="handler name e.g. HandleClick"
-                                   value="@(sel.Events.GetValueOrDefault(ev.Name))"
+                                   value="@(evb?.Handler)"
                                    @onchange="e => Session.SetEvent(sel.Id, ev.Name, e.Value?.ToString())" />
+                            @if (!string.IsNullOrWhiteSpace(evb?.To))
+                            {
+                                <div class="evto" title="Transition target — edit in the Flow view">→ @evb!.To</div>
+                            }
                         </div>
                     }
                 }
@@ -484,6 +558,7 @@
 
         @* Preview: a top hover strip re-reveals the auto-hidden bar. *@
         @if (_preview) { <div class="barzone" @onmouseenter="ShowBar"></div> }
+      }
     </div>
 
     <PaDialog @ref="_dialog" />
@@ -559,6 +634,22 @@
             }
         </ChildContent>
     </PaMenu>
+
+    @* Flow view (#34): cross-screen transition target picker. *@
+    <PaMenu @ref="_flowMenu" Trigger="none">
+        <ChildContent>
+            <div class="ph slots-h" style="padding:6px 9px">Link to screen</div>
+            @foreach (var sr in _screens.Where(s => s.Screen != Session.Screen))
+            {
+                var target = sr;
+                <PaMenuItem OnClick="() => FlowPickCross(target)">@target.Screen.@target.State</PaMenuItem>
+            }
+            @if (!_screens.Any(s => s.Screen != Session.Screen))
+            {
+                <div class="muted" style="padding:6px 9px">no other screens</div>
+            }
+        </ChildContent>
+    </PaMenu>
 </div>
 
 <style>
@@ -587,6 +678,38 @@
     /* Stage: the canvas fills it at true full width; rail + docks float over it. */
     .stage { position: relative; flex: 1; min-height: 0; }
     .canvas { position: absolute; inset: 0; overflow: auto; background: #eef0f4; }
+
+    /* Flow view (#32) — read-only state machine board. */
+    .flowboard { position: absolute; inset: 0; overflow: auto; background: #f4f5f8;
+        background-image: radial-gradient(#d7dae2 1px, transparent 1px); background-size: 22px 22px; }
+    .flowcanvas { position: relative; }
+    .flowedges { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+    .flowedge { fill: none; stroke: #5b6cf0; stroke-width: 2; }
+    .flowbox { position: absolute; background: #fff; border: 1px solid #cdd2dc; border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(30,35,50,.08); overflow: hidden; font-size: 12px; }
+    .flowbox.cur { border-color: #5b6cf0; box-shadow: 0 0 0 2px rgba(91,108,240,.25); }
+    .fbhead { height: 36px; box-sizing: border-box; display: flex; align-items: center; padding: 0 10px;
+        font-weight: 600; font-family: ui-monospace, monospace; background: #f0f1f6; border-bottom: 1px solid #e2e5ec;
+        cursor: grab; }
+    .fbhead:active { cursor: grabbing; }
+    .flowbox.cur .fbhead { background: #eceefb; }
+    .fbport { height: 26px; box-sizing: border-box; display: flex; align-items: center; gap: 6px;
+        padding: 0 8px; color: #6b7080; white-space: nowrap; cursor: grab; }
+    .fbport:hover { background: #f6f7fb; }
+    .fbport.wired { color: #2b2f3a; }
+    .fbdot { width: 8px; height: 8px; border-radius: 50%; background: #c2c7d2; flex: none; }
+    .fbport.wired .fbdot { background: #5b6cf0; }
+    .fbname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .fbev { color: #9aa0ad; font-family: ui-monospace, monospace; }
+    .fbto { color: #5b6cf0; font-family: ui-monospace, monospace; }
+    .fbacts { display: flex; gap: 1px; align-items: center; flex: none; }
+    .fba { border: none; background: transparent; color: #a7adba; cursor: pointer; font-size: 12px;
+        line-height: 1; padding: 2px 4px; border-radius: 4px; }
+    .fba:hover { background: #eceefb; color: #5b6cf0; }
+    .fbx:hover { background: #fdecec; color: #d9534f; }
+    .fbempty { height: 26px; display: flex; align-items: center; padding: 0 10px; color: #a7adba; font-style: italic; }
+    .flowext { position: absolute; padding: 3px 8px; background: #fff; border: 1px dashed #5b6cf0; border-radius: 12px;
+        font: 11px ui-monospace, monospace; color: #5b6cf0; white-space: nowrap; }
     .barzone { position: absolute; top: 0; left: 0; right: 0; height: 10px; z-index: 85; }
     .rail { position: absolute; top: 12px; left: 12px; z-index: 30; display: flex; flex-direction: column; gap: 4px; padding: 5px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 8px 24px rgba(17,24,39,.12); }
     .dock { position: absolute; top: 12px; bottom: 12px; z-index: 25; display: flex; }
@@ -637,6 +760,7 @@
     .prow { padding: 6px 4px; }
     .prow label { display: block; font-size: 11px; color: #565a66; margin-bottom: 4px; }
     .prow .ptype { color: #b0b4bd; font-family: ui-monospace, monospace; }
+    .prow .evto { margin-top: 4px; font: 11px ui-monospace, monospace; color: #5b6cf0; }
     .prow input[type=text], .prow input[type=number], .prow select { width: 100%; font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid #e2e5ec; border-radius: 6px; }
     .prow .bindbox, .prow .rawbox { margin-top: 4px; font-family: ui-monospace, monospace; font-size: 12px; border-style: dashed; border-color: #c3b6ef; background: #faf9ff; }
     .lgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 4px; }
@@ -692,6 +816,131 @@
     private enum Panel { None, Layers, Components, Elements }
     private Panel _panel = Panel.Layers;
     private bool _propsOpen = true;    // Properties is an independent right-panel toggle (#26)
+
+    // --- Flow view (#32): read-only state machine. Mutually exclusive with Preview. ---
+    private const double FlowHeaderH = 36, FlowRowH = 26;
+    private bool _flow;
+    private FlowGraphModel? _flowModel;
+    private string? _flowModelScreen;
+
+    private void ToggleFlow()
+    {
+        _flow = !_flow;
+        if (_flow) { _preview = false; _flowModel = null; } // rebuild fresh on enter
+    }
+
+    private FlowGraphModel FlowModel()
+    {
+        if (_flowModel is null || _flowModelScreen != Session.Screen)
+        {
+            _flowModel = FlowGraph.Build(_designsDir, Session.Screen, Catalog, Store);
+            _flowModelScreen = Session.Screen;
+        }
+        return _flowModel;
+    }
+
+    private double BoxHeight(FlowBox b) => FlowHeaderH + Math.Max(b.Ports.Count, 1) * FlowRowH;
+
+    private (double W, double H) FlowBoardSize(FlowGraphModel m)
+    {
+        if (m.Boxes.Count == 0) return (600, 400);
+        var w = m.Boxes.Max(b => b.X + FlowGraph.BoxW) + 220; // room for cross-screen chips
+        var h = m.Boxes.Max(b => b.Y + BoxHeight(b)) + 80;
+        return (w, h);
+    }
+
+    // A drawn transition: a bezier from a port's right edge to either a target State box's
+    // left edge (same-screen) or a cross-screen chip placed to the right of the port.
+    private sealed record FlowEdgeGeo(double X1, double Y1, double X2, double Y2, bool Cross, string Label);
+
+    private IEnumerable<FlowEdgeGeo> FlowEdges(FlowGraphModel m)
+    {
+        foreach (var b in m.Boxes)
+        {
+            for (int i = 0; i < b.Ports.Count; i++)
+            {
+                var port = b.Ports[i];
+                if (port.To is null) continue;
+                var py = b.Y + FlowHeaderH + i * FlowRowH + FlowRowH / 2;
+                var px = b.X + FlowGraph.BoxW;
+                var cross = port.To.Contains('.');
+                if (!cross && m.Boxes.FirstOrDefault(x => x.State == port.To) is { } tb)
+                    yield return new FlowEdgeGeo(px, py, tb.X, tb.Y + FlowHeaderH / 2, false, port.To);
+                else
+                    yield return new FlowEdgeGeo(px, py, px + 44, py, true, port.To); // cross-screen / unresolved
+            }
+        }
+    }
+
+    private static string EdgePath(FlowEdgeGeo e)
+    {
+        int x1 = (int)e.X1, y1 = (int)e.Y1, x2 = (int)e.X2, y2 = (int)e.Y2;
+        int c = Math.Max(40, (x2 - x1) / 2);
+        return $"M {x1} {y1} C {x1 + c} {y1}, {x2 - c} {y2}, {x2} {y2}";
+    }
+
+    // --- Flow authoring (#34): drag a port onto a box (same-screen), ⋮ menu (cross-screen),
+    // ✕ clear; drag a box header to reposition (persisted to <screen>.flow.json). ---
+    private sealed record FlowDrag(string Kind, string FileBase, string State, string Path, string Event, double GrabX, double GrabY);
+    private sealed record FlowPoint(double X, double Y);
+    private FlowDrag? _flowDrag;
+    private FlowDrag? _flowPin;     // port awaiting a cross-screen target from the menu
+    private PaMenu? _flowMenu;
+
+    private void FlowPortDragStart(FlowBox b, FlowPort port)
+        => _flowDrag = new FlowDrag("port", b.FileBase, b.State, port.Path, port.Event, 0, 0);
+
+    private void FlowBoxDragStart(FlowBox b, DragEventArgs e)
+        => _flowDrag = new FlowDrag("box", b.FileBase, b.State, "", "", e.OffsetX, e.OffsetY);
+
+    private async Task FlowDropOnBox(FlowBox target)
+    {
+        if (_flowDrag is not { Kind: "port" } d) return;   // box moves are handled on the canvas
+        _flowDrag = null;
+        if (target.State == d.State) return;               // no self-transition
+        await FlowSetTarget(d, target.State);
+    }
+
+    private async Task FlowDropOnCanvas(DragEventArgs e)
+    {
+        if (_flowDrag is not { Kind: "box" } d) return;     // port drops are handled on the box
+        _flowDrag = null;
+        if (_dragMod is null) return;
+        var pt = await _dragMod.InvokeAsync<FlowPoint?>("pointIn", ".flowcanvas", e.ClientX, e.ClientY);
+        if (pt is null) return;
+        await FlowGraph.WritePositionAsync(_designsDir, Session.Screen, d.State, pt.X - d.GrabX, pt.Y - d.GrabY);
+        _flowModel = null; // rebuild with the new position
+    }
+
+    private Task FlowClear(FlowBox b, FlowPort port)
+        => FlowSetTarget(new FlowDrag("port", b.FileBase, b.State, port.Path, port.Event, 0, 0), null);
+
+    private async Task OpenFlowMenu(FlowBox b, FlowPort port, MouseEventArgs e)
+    {
+        _flowPin = new FlowDrag("port", b.FileBase, b.State, port.Path, port.Event, 0, 0);
+        if (_flowMenu is not null) await _flowMenu.OpenAtAsync(e.ClientX, e.ClientY);
+    }
+
+    private async Task FlowPickCross(ScreenRef r)
+    {
+        if (_flowPin is { } d) { await FlowSetTarget(d, $"{r.Screen}.{r.State}"); _flowPin = null; }
+    }
+
+    // Write (or clear) a Transition target on the exact node in its State file, then rebuild
+    // the board. Reuses a throwaway DesignSession so the file keeps its clean serialization
+    // (empty collections omitted, events in object form).
+    private async Task FlowSetTarget(FlowDrag d, string? to)
+    {
+        var file = Path.Combine(_designsDir, d.FileBase + ".json");
+        var temp = new DesignSession(Resolver, Catalog, Options);
+        await temp.LoadAsync(file);
+        if (FlowGraph.Navigate(temp.Root, temp.Overlays, d.Path) is not { } node) return;
+        temp.SetEventTarget(node.Id, d.Event, to);
+        await temp.SaveAsync(_designsDir);
+        // Keep the canvas honest if we edited the currently-loaded state.
+        if (d.FileBase == $"{Session.Screen}.{Session.State}") await Session.LoadAsync(file);
+        _flowModel = null; // rebuild board
+    }
     private string _catQ = "";
     private bool _barHidden;
     private PaDialog? _dialog;
@@ -869,7 +1118,7 @@
     protected override async Task OnInitializedAsync()
     {
         Session.Changed += OnChanged;
-        _designsDir = DesignPaths.DesignsDir(Env.ContentRootPath);
+        _designsDir = DesignPaths.DesignsDir(Env.ContentRootPath, Options.DesignsPath);
         RefreshScreens();
 
         // Open the first existing screen; otherwise start a fresh untitled one.

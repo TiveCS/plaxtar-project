@@ -463,12 +463,29 @@ public sealed class DesignSession
     }
 
     // <Name>="Handler" for an EventCallback param. Empty handler removes the event.
+    // Set the codegen handler-stub name for an event, preserving any Transition target.
     public void SetEvent(string id, string name, string? handler)
     {
         var node = FindAny(id);
         if (node is null) return;
-        if (string.IsNullOrWhiteSpace(handler)) node.Events.Remove(name);
-        else node.Events[name] = handler.Trim();
+        var to = node.Events.GetValueOrDefault(name)?.To;
+        var binding = new EventBinding(string.IsNullOrWhiteSpace(handler) ? null : handler.Trim(), to);
+        if (binding.IsEmpty) node.Events.Remove(name);
+        else node.Events[name] = binding;
+        Notify();
+    }
+
+    // Set (or clear, when `to` is blank) an event's Transition target, preserving the
+    // handler. Authored from the Flow view (#34). `to` = bare State name or dotted
+    // `screen.state` (ADR 0008).
+    public void SetEventTarget(string id, string name, string? to)
+    {
+        var node = FindAny(id);
+        if (node is null) return;
+        var handler = node.Events.GetValueOrDefault(name)?.Handler;
+        var binding = new EventBinding(handler, string.IsNullOrWhiteSpace(to) ? null : to.Trim());
+        if (binding.IsEmpty) node.Events.Remove(name);
+        else node.Events[name] = binding;
         Notify();
     }
 
@@ -586,7 +603,8 @@ public sealed class DesignSession
         if (dto.Bindings is not null)
             foreach (var (name, field) in dto.Bindings) node.Bindings[name] = field;
         if (dto.Events is not null)
-            foreach (var (name, handler) in dto.Events) node.Events[name] = handler;
+            foreach (var (name, binding) in dto.Events)
+                if (!binding.IsEmpty) node.Events[name] = binding;
         node.Children = dto.Children.Select(ToEditable).ToList();
         if (dto.Slots is not null)
             foreach (var (slot, kids) in dto.Slots)
@@ -630,7 +648,19 @@ public sealed class DesignSession
             dict["params"] = pars;
         }
         if (n.Bindings.Count > 0) dict["bindings"] = new Dictionary<string, string>(n.Bindings);
-        if (n.Events.Count > 0) dict["events"] = new Dictionary<string, string>(n.Events);
+        if (n.Events.Count > 0)
+        {
+            // Always the object form { handler?, to? } (ADR 0008); omit null fields.
+            var evs = new Dictionary<string, object?>();
+            foreach (var (name, b) in n.Events)
+            {
+                var obj = new Dictionary<string, object?>();
+                if (!string.IsNullOrWhiteSpace(b.Handler)) obj["handler"] = b.Handler;
+                if (!string.IsNullOrWhiteSpace(b.To)) obj["to"] = b.To;
+                evs[name] = obj;
+            }
+            dict["events"] = evs;
+        }
         if (n.Children.Count > 0)
             dict["children"] = n.Children.Select(ToDto).ToList();
 

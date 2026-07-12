@@ -121,6 +121,15 @@ function onKey(e) {
     if (dotnet) dotnet.invokeMethodAsync('OnShortcut', cmd);
 }
 
+// Flow view (#34): translate a viewport point to coordinates relative to the flow canvas
+// (which is position:relative, so absolute box left/top are measured from its top-left).
+export function pointIn(selector, clientX, clientY) {
+    const el = document.querySelector(selector);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: Math.round(clientX - r.left), y: Math.round(clientY - r.top) };
+}
+
 export function init(ref) {
     dotnet = ref;
     document.addEventListener('dragstart', onStart, true);

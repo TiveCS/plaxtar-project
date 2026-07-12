@@ -29,7 +29,7 @@ public sealed class NodeDto
     [JsonPropertyName("attributes")] public Dictionary<string, string>? Attributes { get; set; }
     [JsonPropertyName("params")] public Dictionary<string, JsonElement> Params { get; set; } = new();
     [JsonPropertyName("bindings")] public Dictionary<string, string>? Bindings { get; set; }
-    [JsonPropertyName("events")] public Dictionary<string, string>? Events { get; set; }
+    [JsonPropertyName("events")] public Dictionary<string, EventBinding>? Events { get; set; }
     [JsonPropertyName("children")] public List<NodeDto> Children { get; set; } = new();
     [JsonPropertyName("slots")] public Dictionary<string, List<NodeDto>>? Slots { get; set; }
 }

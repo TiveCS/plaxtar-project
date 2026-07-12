@@ -15,19 +15,34 @@
         "params": {
           "Label": "Email",
           "Placeholder": "you@example.com",
-          "Rules": { "$raw": "new TextField.Validation { Required = true, MaxLength = 120 }" }
+          "Rules": {
+            "$raw": "new TextField.Validation { Required = true, MaxLength = 120 }"
+          }
         },
-        "bindings": { "Value": "email" },
-        "events": { "OnEnter": "HandleSubmit" }
+        "bindings": {
+          "Value": "email"
+        },
+        "events": {
+          "OnEnter": {
+            "handler": "HandleSubmit"
+          }
+        }
       },
       {
         "component": "Badge",
         "src": "Components/SampleUi/Badge.razor",
         "params": {
           "Text": "Sign in",
-          "Variant": { "$enum": "Badge.BadgeVariant.Ok" }
+          "Variant": {
+            "$enum": "Badge.BadgeVariant.Ok"
+          }
         },
-        "events": { "OnClick": "HandleSubmit" }
+        "events": {
+          "OnClick": {
+            "handler": "HandleSubmit",
+            "to": "modal-open"
+          }
+        }
       }
     ]
   }

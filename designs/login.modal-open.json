@@ -22,13 +22,13 @@
       "component": "Modal",
       "src": "Components/SampleUi/Modal.razor",
       "params": { "Title": "Confirm sign in" },
-      "events": { "OnClose": "CloseModal" },
+      "events": { "OnClose": { "handler": "CloseModal", "to": "default" } },
       "children": [
         {
           "component": "Badge",
           "src": "Components/SampleUi/Badge.razor",
           "params": { "Text": "Continue", "Variant": { "$enum": "Badge.BadgeVariant.Ok" } },
-          "events": { "OnClick": "Confirm" }
+          "events": { "OnClick": { "handler": "Confirm" } }
         }
       ]
     }

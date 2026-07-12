@@ -16,6 +16,11 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
+    <!-- Canonical agent codegen guide, embedded so the Catalog export can emit
+         designs/AGENTS.md into any consumer repo (single source, no drift). -->
+    <EmbeddedResource Include="..\..\docs\plaxtar-codegen.md">
+      <LogicalName>Plaxtar.Designer.AgentGuide.md</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
