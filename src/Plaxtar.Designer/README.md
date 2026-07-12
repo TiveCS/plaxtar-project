@@ -47,6 +47,8 @@ if (builder.Environment.IsDevelopment())
         o.AddAssemblyOf<MyButton>();       // your component library assembly/assemblies
         o.NamespaceFilter = "MyApp.Base.UI"; // optional: only surface library components
         o.DefaultShellName = "MainLayout";   // optional: default @layout for new screens
+                                             // (null = blank canvas / no shell by default;
+                                             //  a Shell picker in the top bar switches it live)
         o.Fe = "UI.Audit";                   // optional: micro-frontend id written to exports
     });
 }

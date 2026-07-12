@@ -110,6 +110,9 @@ public sealed class DesignSession
 
     public void SetState(string state) { if (!string.IsNullOrWhiteSpace(state)) { State = state.Trim(); Notify(false); } }
 
+    // Set the Screen's Shell (#29): a layout name, or null for a blank canvas / no @layout.
+    public void SetShell(string? shell) { Shell = string.IsNullOrWhiteSpace(shell) ? null : shell; Notify(false); }
+
     public void Select(string? id) { SelectedId = id; ActiveSlot = null; Notify(false); }
     public void SelectSlot(string? slot) { ActiveSlot = slot; Notify(false); }
 

@@ -17,6 +17,12 @@ public sealed class ComponentCatalog
     private readonly List<ComponentInfo> _components = new();
     public IReadOnlyList<ComponentInfo> Components => _components;
 
+    // Available Shells (#29): LayoutComponentBase subclasses across the scanned
+    // assemblies. Collected before the component namespaceFilter, since layouts live
+    // outside the component-library namespace (e.g. Base.UI/MainLayout).
+    private readonly List<string> _shells = new();
+    public IReadOnlyList<string> Shells => _shells;
+
     public ComponentCatalog(IEnumerable<Assembly> assemblies, RazorSourceIndex sources, string? namespaceFilter = null)
     {
         foreach (var asm in assemblies)
@@ -27,6 +33,9 @@ public sealed class ComponentCatalog
 
             foreach (var t in types)
             {
+                if (t is { IsAbstract: false } && typeof(LayoutComponentBase).IsAssignableFrom(t) && !_shells.Contains(t.Name))
+                    _shells.Add(t.Name);
+
                 if (t is null || t.IsAbstract || !typeof(IComponent).IsAssignableFrom(t)) continue;
                 if (namespaceFilter is not null && t.Namespace?.StartsWith(namespaceFilter, StringComparison.Ordinal) != true) continue;
 
@@ -60,6 +69,7 @@ public sealed class ComponentCatalog
             }
         }
         _components.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+        _shells.Sort(StringComparer.Ordinal);
     }
 
     private static ParamInfo ToParamInfo(PropertyInfo p, bool bindable)

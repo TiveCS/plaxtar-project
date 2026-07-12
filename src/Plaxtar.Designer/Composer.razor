@@ -42,6 +42,9 @@
                     </div>
                 </Footer>
             </PaCombobox>
+            <PaCombobox Items="ShellOptions()" Selected="@(Session.Shell ?? NoneLabel)"
+                        SelectedChanged="OnPickShell"
+                        Placeholder="shell…" SearchPlaceholder="Search layouts…" />
             <span class="topicons">
                 <PaTooltip Text="Layers" Side="bottom"><PaIconButton Title="Layers" Active="@(_panel == Panel.Layers)" OnClick="() => TogglePanel(Panel.Layers)">&#9776;</PaIconButton></PaTooltip>
                 <PaTooltip Text="Components" Side="bottom"><PaIconButton Title="Components" Active="@(_panel == Panel.Components)" OnClick="() => TogglePanel(Panel.Components)">&#9635;</PaIconButton></PaTooltip>
@@ -636,6 +639,15 @@
     private CancellationTokenSource? _barCts;
 
     private IEnumerable<string> ScreenNames() => _screens.Select(s => s.Screen).Distinct();
+
+    // Shell picker (#29): available layouts + a None (blank canvas) option.
+    private const string NoneLabel = "None (blank)";
+    private IEnumerable<string> ShellOptions() => new[] { NoneLabel }.Concat(Catalog.Shells);
+    private void OnPickShell(string v)
+    {
+        Session.SetShell(v == NoneLabel ? null : v);
+        ApplyShell();
+    }
 
     private IEnumerable<ComponentInfo> FilteredCatalog() =>
         string.IsNullOrWhiteSpace(_catQ)
