@@ -86,6 +86,24 @@
         @if (_importMsg is not null) { <span class="okmsg">@_importMsg</span> }
         @if (!_preview)
         {
+            @* Keyboard shortcuts reference. *@
+            <PaPopover Align="end">
+                <Trigger>
+                    <PaIconButton Title="Keyboard shortcuts">&#9432;</PaIconButton>
+                </Trigger>
+                <Body>
+                    <div class="shortcuts">
+                        <div class="sc-h">Keyboard shortcuts</div>
+                        <div class="sc-row"><span>Delete node</span><kbd>Del</kbd></div>
+                        <div class="sc-row"><span>Save</span><kbd>Ctrl</kbd><kbd>S</kbd></div>
+                        <div class="sc-row"><span>Preview</span><kbd>Ctrl</kbd><kbd>G</kbd></div>
+                        <div class="sc-row"><span>Toggle panels</span><kbd>Ctrl</kbd><kbd>B</kbd></div>
+                        <div class="sc-row"><span>Undo</span><kbd>Ctrl</kbd><kbd>Z</kbd></div>
+                        <div class="sc-row"><span>Redo</span><kbd>Ctrl</kbd><kbd>Y</kbd></div>
+                        <div class="sc-row"><span>Insert quick slot</span><kbd>1</kbd>–<kbd>9</kbd></div>
+                    </div>
+                </Body>
+            </PaPopover>
             @* Download/Import (#35): survive an ephemeral dev-server container. *@
             <label class="io-btn" title="Import designs (.zip or .json) — merges, imported wins">
                 &#8593; Import
@@ -173,7 +191,7 @@
             @if (_panel != Panel.None)
             {
                 <div class="dock dock-left">
-                    <PaPanel Title="@_panel.ToString()">
+                    <PaPanel Title="@_panel.ToString()" OnClose="() => TogglePanel(Panel.None)">
                         @if (_panel == Panel.Layers)
                         {
                             @foreach (var (node, depth) in Flatten(Session.Root, 0))
@@ -297,7 +315,7 @@
         @if (!_preview && _propsOpen)
         {
             <div class="dock dock-right">
-                <PaPanel Title="Properties">
+                <PaPanel Title="Properties" OnClose="() => _propsOpen = false">
             @if (Session.Selected is { } sel)
             {
                 <div class="ptarget">
@@ -702,6 +720,11 @@
         border: 1px solid #d0d4dc; border-radius: 6px; background: #fff; color: #1f2430; cursor: pointer; }
     .io-btn:hover { background: #f2f3f7; }
     .io-btn input[type=file] { display: none; }
+    .shortcuts { width: 232px; padding: 4px; }
+    .shortcuts .sc-h { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6b7280; padding: 4px 6px 6px; }
+    .shortcuts .sc-row { display: flex; align-items: center; gap: 4px; padding: 4px 6px; font-size: 12.5px; color: #374151; }
+    .shortcuts .sc-row span { flex: 1; }
+    .shortcuts kbd { font: 11px ui-monospace, monospace; background: #f3f4f6; border: 1px solid #dfe2e8; border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px; color: #374151; }
     .newrow { display: flex; gap: 6px; align-items: center; }
     .newrow input { flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; }
 
@@ -792,11 +815,12 @@
     .prow label { display: block; font-size: 11px; color: #565a66; margin-bottom: 4px; }
     .prow .ptype { color: #b0b4bd; font-family: ui-monospace, monospace; }
     .prow .evto { margin-top: 4px; font: 11px ui-monospace, monospace; color: #5b6cf0; }
-    .prow input[type=text], .prow input[type=number], .prow select { width: 100%; font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid #e2e5ec; border-radius: 6px; }
+    .prow input[type=text], .prow input[type=number], .prow select { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid #e2e5ec; border-radius: 6px; }
     .prow .bindbox, .prow .rawbox { margin-top: 4px; font-family: ui-monospace, monospace; font-size: 12px; border-style: dashed; border-color: #c3b6ef; background: #faf9ff; }
-    .lgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 2px 4px; }
+    .lgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; padding: 2px 4px; }
+    .lgrid > div { min-width: 0; }
     .lgrid label { display: block; font-size: 11px; color: #565a66; margin-bottom: 3px; }
-    .lgrid input { width: 100%; font: inherit; font-size: 12.5px; font-family: ui-monospace, monospace; padding: 4px 6px; border: 1px solid #e2e5ec; border-radius: 6px; }
+    .lgrid input { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; font-size: 12.5px; font-family: ui-monospace, monospace; padding: 4px 6px; border: 1px solid #e2e5ec; border-radius: 6px; }
     .muted { color: #8a8f9c; font-size: 12.5px; padding: 4px; }
 
     /* selection wrapper (edit mode only; not exported) */
@@ -810,7 +834,7 @@
     .etag:hover { border-color: #5b6cf0; color: #4550c8; }
     .txtnode { width: 100%; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid #e2e5ec; border-radius: 6px; resize: vertical; }
     .attrrow { display: flex; gap: 4px; padding: 3px 4px; }
-    .attrk, .attrv { flex: 1; min-width: 0; font: 12px ui-monospace, monospace; padding: 4px 6px; border: 1px solid #e2e5ec; border-radius: 6px; }
+    .attrk, .attrv { flex: 1; min-width: 0; box-sizing: border-box; font: 12px ui-monospace, monospace; padding: 4px 6px; border: 1px solid #e2e5ec; border-radius: 6px; }
     .attrk { flex: 0 0 42%; }
     .attrx { border: 1px solid #e2e5ec; background: #fff; color: #c0392b; border-radius: 6px; width: 26px; cursor: pointer; }
     .attrx.add { color: #16884a; }

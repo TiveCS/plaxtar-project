@@ -27,7 +27,15 @@
     color: #6b7280;
 }
 
-.pa-panel-a { display: inline-flex; gap: 4px; }
+.pa-panel-a { display: inline-flex; align-items: center; gap: 4px; }
+
+.pa-panel-x {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; padding: 0;
+    border: 0; border-radius: 5px; background: transparent;
+    color: #9ca3af; font-size: 13px; line-height: 1; cursor: pointer;
+}
+.pa-panel-x:hover { background: #f0f1f4; color: #374151; }
 
 .pa-panel-b {
     flex: 1;

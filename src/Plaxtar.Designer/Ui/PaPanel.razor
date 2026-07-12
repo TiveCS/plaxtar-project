@@ -5,7 +5,13 @@
 <div class="pa-panel">
     <div class="pa-panel-h">
         <span class="pa-panel-t">@Title</span>
-        @if (HeaderActions is not null) { <span class="pa-panel-a">@HeaderActions</span> }
+        <span class="pa-panel-a">
+            @HeaderActions
+            @if (OnClose.HasDelegate)
+            {
+                <button type="button" class="pa-panel-x" title="Close" @onclick="OnClose">&#10005;</button>
+            }
+        </span>
     </div>
     <div class="pa-panel-b">@ChildContent</div>
 </div>
@@ -14,4 +20,5 @@
     [Parameter] public string? Title { get; set; }
     [Parameter] public RenderFragment? HeaderActions { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }   // shows a close (✕) button when set
 }
