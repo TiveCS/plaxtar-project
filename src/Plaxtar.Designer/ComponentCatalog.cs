@@ -33,10 +33,26 @@ public sealed class ComponentCatalog
 
             foreach (var t in types)
             {
-                if (t is { IsAbstract: false } && typeof(LayoutComponentBase).IsAssignableFrom(t) && !_shells.Contains(t.Name))
-                    _shells.Add(t.Name);
+              // A single member-load failure (TypeLoadException / FileNotFoundException on a
+              // type whose deps can't resolve — routine in large third-party assemblies like
+              // DevExpress) must not abort the whole scan, or every layout/component after the
+              // bad type silently vanishes (e.g. an empty Shell list). Skip the type, keep going.
+              try
+              {
+                if (t is null || t.IsAbstract) continue;
 
-                if (t is null || t.IsAbstract || !typeof(IComponent).IsAssignableFrom(t)) continue;
+                // A "shell" is anything LayoutView can host: a LayoutComponentBase, OR —
+                // for apps whose layouts use a custom base (e.g. Len's CommonPage) — any
+                // component exposing a public [Parameter] RenderFragment Body, which is all
+                // LayoutView actually needs. Detected shells are recorded and NOT also listed
+                // as palette components (a layout isn't a draggable content component).
+                if (IsShell(t))
+                {
+                    if (!_shells.Contains(t.Name)) _shells.Add(t.Name);
+                    continue;
+                }
+
+                if (!typeof(IComponent).IsAssignableFrom(t)) continue;
                 if (namespaceFilter is not null && t.Namespace?.StartsWith(namespaceFilter, StringComparison.Ordinal) != true) continue;
 
                 var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -66,10 +82,23 @@ public sealed class ComponentCatalog
                     .ToArray();
 
                 _components.Add(new ComponentInfo(t.Name, asm.GetName().Name ?? "", sources.Find(t.Name), pars));
+              }
+              catch { /* unresolvable type — skip it, don't sink the rest of the scan */ }
             }
         }
         _components.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
         _shells.Sort(StringComparer.Ordinal);
+    }
+
+    // True for a component LayoutView can host as a Shell: a standard LayoutComponentBase,
+    // or a custom-base layout that still exposes a public [Parameter] RenderFragment Body.
+    private static bool IsShell(Type t)
+    {
+        if (typeof(LayoutComponentBase).IsAssignableFrom(t)) return true;
+        if (!typeof(IComponent).IsAssignableFrom(t)) return false;
+        var body = t.GetProperty("Body", BindingFlags.Public | BindingFlags.Instance);
+        return body is { PropertyType: var pt } && pt == typeof(RenderFragment)
+            && body.IsDefined(typeof(ParameterAttribute));
     }
 
     private static ParamInfo ToParamInfo(PropertyInfo p, bool bindable)

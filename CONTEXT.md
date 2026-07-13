@@ -41,7 +41,7 @@ The unit of design in the MVP: one page's content region plus its States, render
 _Avoid_: page (page = the eventual real `.razor`; Screen = its design)
 
 **Shell**:
-The real Blazor layout (`@layout` / `MainLayout` with `@Body`) a Screen is designed inside. Rendered live as a fixed backdrop; not edited.
+The real Blazor layout (`@layout` / `MainLayout` with `@Body`) a Screen is designed inside. Always **recorded** on the Screen for codegen (`@layout` on the exported page). Whether it also renders live on the canvas depends on its kind: a **standard shell** (`LayoutComponentBase`) renders as a fixed backdrop; a **heavy shell** — app-chrome on a custom base (e.g. Len's `CommonPage`) with `position:fixed` nav + `AuthorizeView`/service calls — is recorded only, not rendered (it would overlap the Composer and can crash the circuit). See ADR 0010.
 _Avoid_: layout (overloaded — reserve "layout" for CSS flow), frame, template
 
 **Flow layout**:

@@ -79,6 +79,10 @@
                 <PaCombobox Items="ShellOptions()" Selected="@(Session.Shell ?? NoneLabel)"
                             SelectedChanged="OnPickShell"
                             Placeholder="shell…" SearchPlaceholder="Search layouts…" />
+                @if (Session.Shell is not null && !_shellRendered)
+                {
+                    <span class="shellnote" title="Shell recorded for codegen (layout on the exported page) — not rendered on the canvas because it's heavy app-chrome (fixed nav/auth).">metadata only</span>
+                }
             </span>
         }
         <span class="spacer"></span>
@@ -698,14 +702,17 @@
 
 <style>
     /* Full-bleed: own the viewport so the host's body margin / padding never insets
-       the design surface (Preview must match the real app's edge-to-edge width). */
-    .composer { position: fixed; inset: 0; background: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; z-index: 1; }
+       the design surface (Preview must match the real app's edge-to-edge width).
+       z-index must clear the host shell's own fixed chrome (nav / top bar), else those
+       paint over the Composer's left dock + top bar and the panels look "hidden". */
+    .composer { position: fixed; inset: 0; background: #fff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; z-index: 2147483000; }
 
     /* Top bar. In Preview it floats over the canvas and auto-hides (ADR 0006). */
     .bar { display: flex; align-items: center; gap: 7px; padding: 5px 12px; border-bottom: 1px solid #e2e5ec; background: #fff; z-index: 90; font-size: 12.5px; }
     .is-preview .bar { position: absolute; top: 0; left: 0; right: 0; transition: transform .25s ease; box-shadow: 0 2px 10px rgba(17,24,39,.08); }
     .bar-hidden { transform: translateY(-100%); }
     .screenpick { display: inline-flex; align-items: center; gap: 7px; }
+    .shellnote { font-size: 10px; color: #8a6d1a; background: #fdf3d6; border: 1px solid #f0e3ad; border-radius: 5px; padding: 2px 6px; white-space: nowrap; cursor: help; }
     .topicons { display: inline-flex; align-items: center; gap: 2px; }
     .topicons-sep { width: 1px; height: 16px; background: #e2e5ec; margin: 0 3px; }
     .quickbar { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; overflow: hidden; }
@@ -858,6 +865,7 @@
 
 @code {
     private Type? _shellType;
+    private bool _shellRendered; // false = shell recorded for codegen but not live-rendered (heavy app-chrome)
     private bool _preview;      // true = raw, full-width, true-fidelity render (ADR 0005)
     private string? _saved;
     private string? _importMsg;    // Download/Import (#35) status
@@ -1186,7 +1194,17 @@
     }
 
     private void RefreshScreens() => _screens = Store.List(_designsDir).ToList();
-    private void ApplyShell() => _shellType = Session.Shell is { } s ? Resolver.Resolve(s) : null;
+    private void ApplyShell()
+    {
+        var t = Session.Shell is { } s ? Resolver.Resolve(s) : null;
+        // Only live-render standard LayoutComponentBase shells. A custom-base "shell"
+        // (Body-convention, e.g. Len's CommonPage app-chrome) is recorded for codegen
+        // (@layout in the exported tree) but NOT rendered here: its position:fixed nav/
+        // topbar + AuthorizeView/service calls would overlap the Composer and can crash
+        // the circuit. Canvas stays blank; the shell name still exports.
+        _shellRendered = t is not null && typeof(LayoutComponentBase).IsAssignableFrom(t);
+        _shellType = _shellRendered ? t : null;
+    }
 
     private async Task LoadScreenAsync(ScreenRef s)
     {
